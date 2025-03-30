@@ -1,4 +1,3 @@
-
 import { wcApiClient } from "./apiConfig";
 
 export interface Product {
@@ -197,8 +196,8 @@ export const createProduct = async (productData: Partial<Product>) => {
     
     if (productData.type === 'variable' && productData.variations && Array.isArray(productData.variations) && response.data.id) {
       const formattedVariations = productData.variations.map(variation => {
-        if (typeof variation === 'object' && variation !== null) {
-          const variationObj: any = { ...variation };
+        if (variation && typeof variation === 'object' && variation !== null) {
+          const variationObj: any = variation;
           
           if (variationObj.attributes && Array.isArray(variationObj.attributes)) {
             variationObj.attributes = variationObj.attributes.map((attr: any) => ({
@@ -208,13 +207,13 @@ export const createProduct = async (productData: Partial<Product>) => {
           }
           
           return {
-            ...variationObj,
             regular_price: variationObj.regular_price || '',
-            sale_price: variationObj.sale_price || ''
+            sale_price: variationObj.sale_price || '',
+            ...variationObj
           };
         }
-        return variation;
-      });
+        return null;
+      }).filter(Boolean);
       
       await createProductVariations(response.data.id, formattedVariations);
     }
@@ -232,8 +231,8 @@ export const updateProduct = async (id: number, productData: Partial<Product>) =
     
     if (productData.type === 'variable' && productData.variations && Array.isArray(productData.variations)) {
       const formattedVariations = productData.variations.map(variation => {
-        if (typeof variation === 'object' && variation !== null) {
-          const variationObj: any = { ...variation };
+        if (variation && typeof variation === 'object' && variation !== null) {
+          const variationObj: any = variation;
           
           if (variationObj.attributes && Array.isArray(variationObj.attributes)) {
             variationObj.attributes = variationObj.attributes.map((attr: any) => ({
@@ -243,13 +242,13 @@ export const updateProduct = async (id: number, productData: Partial<Product>) =
           }
           
           return {
-            ...variationObj,
             regular_price: variationObj.regular_price || '',
-            sale_price: variationObj.sale_price || ''
+            sale_price: variationObj.sale_price || '',
+            ...variationObj
           };
         }
-        return variation;
-      });
+        return null;
+      }).filter(Boolean);
       
       await updateProductVariations(id, formattedVariations);
     }
