@@ -16,12 +16,14 @@ import {
   updateVariationImage
 } from "./variationUtils";
 
+interface AttributeOption {
+  name: string;
+  option: string;
+}
+
 interface Variation {
   id?: number;
-  attributes: {
-    name: string; 
-    option: string;
-  }[];
+  attributes: AttributeOption[];
   regular_price: string;
   sale_price: string;
   sku: string;
@@ -34,11 +36,6 @@ interface Variation {
   };
 }
 
-interface VariationImage {
-  id: number;
-  src: string;
-}
-
 interface VariationsTabProps {
   form: any;
   product: any;
@@ -47,7 +44,7 @@ interface VariationsTabProps {
   variations: Variation[];
   setVariations: (variations: Variation[]) => void;
   isLoadingVariations?: boolean;
-  uploadVariationImage?: (productId: number | null, variationId: number | undefined, file: File) => Promise<VariationImage>;
+  uploadVariationImage?: (productId: number | null, variationId: number | undefined, file: File) => Promise<any>;
   productId: number | null;
 }
 
@@ -68,6 +65,12 @@ const VariationsTab = ({
   const [isDeleteVariationDialogOpen, setIsDeleteVariationDialogOpen] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [attributeWarning, setAttributeWarning] = useState<string | null>(null);
+
+  // Debug current variations data
+  useEffect(() => {
+    console.log("Current variations in VariationsTab:", variations);
+    console.log("Current selected attributes in VariationsTab:", selectedAttributes);
+  }, [variations, selectedAttributes]);
 
   // Check for attributes marked for variations
   useEffect(() => {
@@ -106,6 +109,8 @@ const VariationsTab = ({
         setIsGenerating(false);
         return;
       }
+      
+      console.log("Generated attribute combinations:", combinations);
 
       // Default data for new variations
       const defaultVariationData = {
@@ -130,6 +135,8 @@ const VariationsTab = ({
         variations,
         defaultVariationData
       );
+      
+      console.log("Created new variations:", newVariations);
 
       // If this is an existing product, preserve the variation IDs
       if (existingVariationDetails.length > 0) {
@@ -276,6 +283,14 @@ const VariationsTab = ({
       setIsUploadingImage(true);
       const variation = variations[index];
       
+      if (!variation.id) {
+        toast.warning("Cần lưu sản phẩm trước khi tải lên hình ảnh cho biến thể mới");
+        setIsUploadingImage(false);
+        return;
+      }
+      
+      console.log(`Uploading image for variation ${variation.id} at index ${index}`);
+      
       // Upload the image and get the response
       const imageData = await uploadVariationImage(productId, variation.id, file);
       
@@ -371,4 +386,4 @@ const VariationsTab = ({
   );
 };
 
-export default VariationsTab;
+export { VariationsTab };

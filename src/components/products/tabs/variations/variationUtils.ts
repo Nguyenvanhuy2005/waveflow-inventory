@@ -1,4 +1,3 @@
-
 interface AttributeOption {
   name: string;
   option: string;
@@ -214,6 +213,8 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
     return [];
   }
 
+  console.log("Formatting variations for API submission:", variations);
+
   return variations.map(variation => {
     if (!variation || typeof variation !== 'object') {
       console.error("Invalid variation item:", variation);
@@ -234,10 +235,8 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
     if (variation.manage_stock !== undefined) formattedVariation.manage_stock = variation.manage_stock;
     
     // Include image if present
-    if (variation.image && variation.image.id) {
-      formattedVariation.image = {
-        id: variation.image.id
-      };
+    if (variation.image) {
+      formattedVariation.image = variation.image;
     }
     
     // Format attributes correctly for WooCommerce API
@@ -246,7 +245,10 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
         name: attr.name,
         option: attr.option
       }));
+      
+      console.log("Formatted variation attributes:", formattedVariation.attributes);
     } else {
+      console.warn("Missing attributes for variation, adding empty array");
       formattedVariation.attributes = [];
     }
     
@@ -322,6 +324,8 @@ export const updateVariationImage = (
       ...updatedVariations[index],
       image: imageData
     };
+    
+    console.log(`Updated image for variation at index ${index}:`, imageData);
   }
   
   return updatedVariations;

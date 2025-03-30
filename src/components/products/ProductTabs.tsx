@@ -79,6 +79,10 @@ const ProductTabs = ({
     enabled: !!attributes && attributes.length > 0,
   });
 
+  // Debug to check if attributes are being properly passed
+  console.log("Selected attributes in ProductTabs:", selectedAttributes);
+  console.log("Current variations in ProductTabs:", variations);
+
   return (
     <Tabs value={selectedTab} onValueChange={setSelectedTab}>
       <TabsList className="grid grid-cols-4 md:w-[800px]">

@@ -58,6 +58,11 @@ const VariationsTable = ({
       onSelectVariationImage(index, e.target.files[0]);
     }
   };
+  
+  // Debug function to check variation data
+  const debugVariation = (index: number) => {
+    console.log(`Variation ${index} data:`, variations[index]);
+  };
 
   return (
     <div className="rounded-md border">
@@ -85,21 +90,28 @@ const VariationsTable = ({
                 </div>
               </TableCell>
             </TableRow>
+          ) : variations.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="h-24 text-center">
+                <div className="text-muted-foreground">Chưa có biến thể nào</div>
+              </TableCell>
+            </TableRow>
           ) : (
             variations.map((variation, index) => (
-              <TableRow key={index}>
+              <TableRow key={index} onClick={() => debugVariation(index)}>
                 <TableCell>
                   {variation.id || <span className="text-muted-foreground italic">Mới</span>}
                 </TableCell>
                 <TableCell className="font-medium">
                   {variation.attributes && variation.attributes.length > 0 ? (
-                    variation.attributes.map(attr => (
-                      <div key={attr.name} className="mb-1">
-                        <span className="font-medium">{attr.name}:</span> {attr.option}
+                    variation.attributes.map((attr, attrIdx) => (
+                      <div key={`${attr.name}-${attrIdx}`} className="mb-1">
+                        <span className="font-medium">{attr.name}:</span>{" "}
+                        {attr.option || "Không có giá trị"}
                       </div>
                     ))
                   ) : (
-                    <div className="text-muted-foreground italic">Không có thuộc tính</div>
+                    <div className="text-amber-500 italic">Không có thuộc tính</div>
                   )}
                 </TableCell>
                 <TableCell>
@@ -142,13 +154,13 @@ const VariationsTable = ({
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <div 
-                      className="w-10 h-10 border rounded cursor-pointer flex items-center justify-center bg-muted/30"
+                      className="w-10 h-10 border rounded cursor-pointer flex items-center justify-center bg-muted/30 overflow-hidden"
                       onClick={() => handleImageClick(index)}
                     >
                       {variation.image && variation.image.src ? (
                         <img 
                           src={variation.image.src} 
-                          alt={`Biến thể ${index}`} 
+                          alt={`Biến thể ${index + 1}`} 
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -162,13 +174,19 @@ const VariationsTable = ({
                       onChange={(e) => handleImageChange(index, e)}
                       ref={el => fileInputRefs.current[index] = el}
                     />
+                    {variation.image?.id ? (
+                      <span className="text-xs text-muted-foreground">ID: {variation.image.id}</span>
+                    ) : null}
                   </div>
                 </TableCell>
                 <TableCell>
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => onDeleteVariation(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteVariation(index);
+                    }}
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash className="h-4 w-4" />

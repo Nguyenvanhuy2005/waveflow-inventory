@@ -102,9 +102,16 @@ const ProductForm = ({
       
       // Set variations if they exist
       if (product.variationsDetails && Array.isArray(product.variationsDetails)) {
+        console.log("Loading existing variations:", product.variationsDetails);
         setVariations(product.variationsDetails);
       } else {
         setVariations([]);
+      }
+      
+      // Load existing images
+      if (product.images && Array.isArray(product.images)) {
+        console.log("Loading existing product images:", product.images);
+        setImagePreviewUrls(product.images.map((img: any) => img.src));
       }
     }
   }, [product, form]);
@@ -116,7 +123,9 @@ const ProductForm = ({
     }
     
     try {
+      console.log(`Uploading image for variation ${variationId} of product ${productId}`);
       const response = await uploadProductVariationImage(productId, variationId, file);
+      console.log("Variation image upload response:", response);
       return response;
     } catch (error) {
       console.error("Error uploading variation image:", error);
@@ -137,17 +146,46 @@ const ProductForm = ({
         preparedData.categories = preparedData.categories.map((id: number) => ({ id }));
       }
       
-      // Add attributes
-      preparedData.attributes = selectedAttributes.map(attr => ({
-        ...attr,
-        visible: attr.visible === undefined ? true : attr.visible,
-        variation: attr.variation === undefined ? false : attr.variation
-      }));
+      // Add attributes with proper formatting for WooCommerce API
+      if (selectedAttributes && selectedAttributes.length > 0) {
+        preparedData.attributes = selectedAttributes.map(attr => ({
+          id: attr.id,
+          name: attr.name,
+          position: attr.position || 0,
+          visible: attr.visible === undefined ? true : attr.visible,
+          variation: attr.variation === undefined ? false : attr.variation,
+          options: Array.isArray(attr.options) ? attr.options : []
+        }));
+      } else {
+        preparedData.attributes = [];
+      }
       
-      // Format and add variations for API submission
-      preparedData.variations = formatVariationAttributesForApi(variations);
+      // Process variations for API submission
+      if (variations && Array.isArray(variations) && variations.length > 0) {
+        const formattedVariations = formatVariationAttributesForApi(variations);
+        console.log("Formatted variations for API:", formattedVariations);
+        preparedData.variations = formattedVariations;
+      } else {
+        preparedData.variations = [];
+      }
       
-      console.log("Sending to API:", preparedData);
+      // Add selected images to the product data
+      if (selectedImages && selectedImages.length > 0) {
+        preparedData.images = selectedImages;
+      }
+      
+      // If we have existing images from the product, include them
+      if (!isNewProduct && product && product.images && Array.isArray(product.images)) {
+        // Include existing images in the update
+        if (!preparedData.images) {
+          preparedData.images = [...product.images];
+        } else {
+          // Add the File objects to the array that already has existing images
+          preparedData.images = [...product.images, ...preparedData.images];
+        }
+      }
+      
+      console.log("Final data prepared for API submission:", preparedData);
       
       return isNewProduct
         ? createProduct(preparedData)
@@ -203,21 +241,22 @@ const ProductForm = ({
       return;
     }
     
-    // Ensure variations have proper prices
-    const validatedVariations = variations.map(variation => {
-      return {
-        ...variation,
-        regular_price: variation.regular_price || '',
-        sale_price: variation.sale_price || ''
-      };
-    });
+    // Check for missing attributes in variations
+    if (variations.length > 0) {
+      const missingAttributes = variations.some(v => 
+        !v.attributes || !Array.isArray(v.attributes) || v.attributes.length === 0
+      );
+      
+      if (missingAttributes) {
+        console.warn("Some variations are missing attributes, they will be generated from selected attributes");
+        // We'll let the API handle this, as it's fixed in the API submission process
+      }
+    }
     
     // Prepare the data for submission
     const formData = {
       ...values,
       type: "variable", // Always set to variable
-      attributes: selectedAttributes,
-      variations: validatedVariations,
     };
     
     console.log("Submitting data:", formData);
