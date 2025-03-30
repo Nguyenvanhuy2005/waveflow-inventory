@@ -1,3 +1,4 @@
+
 import { wcApiClient } from "./apiConfig";
 
 export interface Product {
@@ -175,140 +176,122 @@ export interface ProductSearchParams {
 }
 
 export const getProducts = async (params?: ProductSearchParams) => {
-  const response = await wcApiClient.get<Product[]>("/products", { params });
-  return response.data;
+  try {
+    const defaultParams = { per_page: 20, ...params };
+    const response = await wcApiClient.get<Product[]>("/products", { params: defaultParams });
+    console.log(`Fetched ${response.data.length} products`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    throw error;
+  }
 };
 
 export const getProduct = async (id: number) => {
-  const response = await wcApiClient.get<Product>(`/products/${id}`);
-  
-  if (response.data.type === 'variable' && response.data.variations && response.data.variations.length > 0) {
-    const variationsDetails = await getProductVariations(id);
-    response.data.variationsDetails = variationsDetails;
+  try {
+    console.log(`Fetching product with ID ${id}`);
+    const response = await wcApiClient.get<Product>(`/products/${id}`);
+    
+    if (response.data.type === 'variable' && response.data.variations && response.data.variations.length > 0) {
+      console.log(`Product ${id} is variable with ${response.data.variations.length} variations`);
+      const variationsDetails = await getProductVariations(id);
+      response.data.variationsDetails = variationsDetails;
+      console.log(`Loaded ${variationsDetails.length} variation details for product ${id}`);
+    }
+    
+    console.log(`Product ${id} loaded successfully`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching product ${id}:`, error);
+    throw error;
   }
-  
-  return response.data;
 };
 
 export const createProduct = async (productData: Partial<Product>) => {
   try {
-    console.log("Creating product with data:", JSON.stringify(productData, null, 2));
+    console.log("Creating product with data:", productData);
+    
+    // Prepare data for API submission
+    const dataToSubmit: any = { ...productData };
+    
+    // Remove images from the direct submission as we'll handle them separately
+    const imagesToUpload = dataToSubmit.images;
+    delete dataToSubmit.images;
+    
+    // Remove variations from the direct submission as we'll handle them separately
+    const variationsToCreate = dataToSubmit.variations;
+    delete dataToSubmit.variations;
     
     // Create the main product first
-    const response = await wcApiClient.post<Product>("/products", productData);
+    const response = await wcApiClient.post<Product>("/products", dataToSubmit);
     const productId = response.data.id;
     console.log("Product created with ID:", productId);
     
-    // If we have variations, we need to create them separately
-    if (productData.type === 'variable' && 
-        productData.variations && 
-        Array.isArray(productData.variations) &&
-        productId) {
-      
-      console.log(`Creating ${productData.variations.length} variations for product ${productId}`);
-      
-      // Format variations for API submission
-      const variationsToSubmit = productData.variations
-        .filter(variation => variation && typeof variation === 'object')
-        .map(variation => {
-          const variationData: Record<string, any> = {};
-          
-          // Basic properties
-          if (typeof variation === 'object' && variation !== null) {
-            const variationObj = variation as Record<string, any>;
-            
-            variationData.regular_price = variationObj.regular_price || '';
-            variationData.sale_price = variationObj.sale_price || '';
-            variationData.sku = variationObj.sku || '';
-            
-            if (variationObj.stock_status) variationData.stock_status = variationObj.stock_status;
-            if (variationObj.stock_quantity !== undefined) variationData.stock_quantity = variationObj.stock_quantity;
-            if (variationObj.manage_stock !== undefined) variationData.manage_stock = variationObj.manage_stock;
-            
-            // Ensure attributes are properly formatted for WooCommerce API
-            if (variationObj.attributes && Array.isArray(variationObj.attributes)) {
-              variationData.attributes = variationObj.attributes.map((attr: any) => ({
-                name: attr.name,
-                option: attr.option
-              }));
-              
-              console.log("Formatted variation attributes:", JSON.stringify(variationData.attributes));
-            }
-          }
-          
-          return variationData;
-        })
-        .filter(variation => Object.keys(variation).length > 0);
-      
-      // Create variations
-      if (variationsToSubmit.length > 0) {
-        await createProductVariations(productId, variationsToSubmit);
-      }
+    // Upload images if they exist
+    if (imagesToUpload && Array.isArray(imagesToUpload) && imagesToUpload.length > 0) {
+      console.log(`Uploading ${imagesToUpload.length} images for new product ${productId}`);
+      await uploadProductImages(productId, imagesToUpload);
     }
     
-    // Upload images if they exist
-    if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
-      await uploadProductImages(productId, productData.images);
+    // If we have variations, we need to create them separately
+    if (productData.type === 'variable' && 
+        variationsToCreate && 
+        Array.isArray(variationsToCreate) &&
+        variationsToCreate.length > 0 &&
+        productId) {
+      
+      console.log(`Creating ${variationsToCreate.length} variations for product ${productId}`);
+      await createProductVariations(productId, variationsToCreate);
     }
     
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating product:", error);
+    
+    // More descriptive error messages
+    if (error.response?.status === 401) {
+      console.error("Authentication error - Check API credentials");
+    } else if (error.response?.status === 400) {
+      console.error("Bad request - Check data format:", error.response.data);
+    }
+    
     throw error;
   }
 };
 
 export const updateProduct = async (id: number, productData: Partial<Product>) => {
   try {
-    console.log("Updating product with data:", JSON.stringify(productData, null, 2));
+    console.log(`Updating product ${id} with data:`, productData);
     
-    const response = await wcApiClient.put<Product>(`/products/${id}`, productData);
+    // Prepare data for API submission
+    const dataToSubmit: any = { ...productData };
     
+    // Remove images from the direct submission as we'll handle them separately
+    const imagesToUpload = dataToSubmit.images?.filter((img: any) => img instanceof File);
+    delete dataToSubmit.images;
+    
+    // Remove variations from the direct submission as we'll handle them separately
+    const variationsToUpdate = dataToSubmit.variations;
+    delete dataToSubmit.variations;
+    
+    // Update the main product first
+    const response = await wcApiClient.put<Product>(`/products/${id}`, dataToSubmit);
+    console.log(`Product ${id} updated successfully`);
+    
+    // Upload new images if they exist
+    if (imagesToUpload && Array.isArray(imagesToUpload) && imagesToUpload.length > 0) {
+      console.log(`Uploading ${imagesToUpload.length} new images for product ${id}`);
+      await uploadProductImages(id, imagesToUpload);
+    }
+    
+    // If we have variations, we need to update them separately
     if (productData.type === 'variable' && 
-        productData.variations && 
-        Array.isArray(productData.variations)) {
+        variationsToUpdate && 
+        Array.isArray(variationsToUpdate) &&
+        variationsToUpdate.length > 0) {
       
-      console.log(`Updating ${productData.variations.length} variations for product ${id}`);
-      
-      const variationsToSubmit = productData.variations
-        .filter(variation => variation && typeof variation === 'object')
-        .map(variation => {
-          const variationData: Record<string, any> = {};
-          
-          // Basic properties
-          if (typeof variation === 'object' && variation !== null) {
-            const variationObj = variation as Record<string, any>;
-            
-            if (variationObj.id) variationData.id = variationObj.id;
-            variationData.regular_price = variationObj.regular_price || '';
-            variationData.sale_price = variationObj.sale_price || '';
-            variationData.sku = variationObj.sku || '';
-            
-            if (variationObj.stock_status) variationData.stock_status = variationObj.stock_status;
-            if (variationObj.stock_quantity !== undefined) variationData.stock_quantity = variationObj.stock_quantity;
-            if (variationObj.manage_stock !== undefined) variationData.manage_stock = variationObj.manage_stock;
-            
-            // Format attributes correctly for WooCommerce API
-            if (variationObj.attributes && Array.isArray(variationObj.attributes)) {
-              variationData.attributes = variationObj.attributes.map((attr: any) => ({
-                name: attr.name,
-                option: attr.option
-              }));
-              
-              console.log("Variation attributes for update:", JSON.stringify(variationData.attributes));
-            } else {
-              console.warn("Missing or invalid attributes for variation:", variationObj);
-              variationData.attributes = [];
-            }
-          }
-          
-          return variationData;
-        })
-        .filter(variation => Object.keys(variation).length > 0);
-      
-      if (variationsToSubmit.length > 0) {
-        await updateProductVariations(id, variationsToSubmit);
-      }
+      console.log(`Updating ${variationsToUpdate.length} variations for product ${id}`);
+      await updateProductVariations(id, variationsToUpdate);
     }
     
     return response.data;
@@ -319,14 +302,21 @@ export const updateProduct = async (id: number, productData: Partial<Product>) =
 };
 
 export const deleteProduct = async (id: number) => {
-  const response = await wcApiClient.delete<Product>(`/products/${id}`);
-  return response.data;
+  try {
+    const response = await wcApiClient.delete<Product>(`/products/${id}`);
+    console.log(`Product ${id} deleted successfully`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting product ${id}:`, error);
+    throw error;
+  }
 };
 
 export const getProductCategories = async (params?: { per_page?: number; page?: number }) => {
   try {
     const defaultParams = { per_page: 100, ...params };
     const response = await wcApiClient.get("/products/categories", { params: defaultParams });
+    console.log(`Fetched ${response.data.length} product categories`);
     return response.data;
   } catch (error) {
     console.error("Error fetching product categories:", error);
@@ -352,26 +342,25 @@ export const uploadProductImages = async (productId: number, images: any[]) => {
   try {
     console.log(`Uploading ${images.length} images for product ${productId}`);
     
-    const uploadPromises = images.map(image => {
-      // Check if it's a file or an existing image with src
-      if (image instanceof File) {
+    const uploadPromises = images
+      .filter(image => image instanceof File)
+      .map(image => {
         const formData = new FormData();
         formData.append('file', image, image.name);
-        console.log(`Uploading file ${image.name}`);
+        console.log(`Uploading image file ${image.name}`);
         
         return wcApiClient.post(`/products/${productId}/images`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-      } else if (image && image.src) {
-        // This is an existing image, no need to upload again
-        return Promise.resolve({ data: image });
-      }
-      return Promise.resolve(null);
-    }).filter(Boolean);
+      });
     
-    if (uploadPromises.length === 0) return [];
+    if (uploadPromises.length === 0) {
+      console.log("No valid images to upload");
+      return [];
+    }
     
     const responses = await Promise.all(uploadPromises);
+    console.log(`Successfully uploaded ${responses.length} images`);
     return responses.map(response => response?.data).filter(Boolean);
   } catch (error) {
     console.error("Error uploading product images:", error);
@@ -403,6 +392,7 @@ export const getProductAttributes = async () => {
     const response = await wcApiClient.get<ProductAttribute[]>("/products/attributes", {
       params: { per_page: 100 } // Fetch up to 100 attributes 
     });
+    console.log(`Fetched ${response.data.length} product attributes`);
     return response.data;
   } catch (error) {
     console.error("Error fetching product attributes:", error);
@@ -426,6 +416,7 @@ export const getProductAttributeTerms = async (attributeId: number) => {
 export const createProductAttribute = async (attributeData: Partial<ProductAttribute>) => {
   try {
     const response = await wcApiClient.post<ProductAttribute>("/products/attributes", attributeData);
+    console.log("Created new product attribute:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error creating product attribute:", error);
@@ -436,6 +427,7 @@ export const createProductAttribute = async (attributeData: Partial<ProductAttri
 export const createProductAttributeTerm = async (attributeId: number, termData: Partial<ProductAttributeTerm>) => {
   try {
     const response = await wcApiClient.post<ProductAttributeTerm>(`/products/attributes/${attributeId}/terms`, termData);
+    console.log(`Created new attribute term for attribute ${attributeId}:`, response.data);
     return response.data;
   } catch (error) {
     console.error("Error creating attribute term:", error);
@@ -459,6 +451,7 @@ export const getProductVariations = async (productId: number) => {
 export const getProductVariation = async (productId: number, variationId: number) => {
   try {
     const response = await wcApiClient.get<ProductVariation>(`/products/${productId}/variations/${variationId}`);
+    console.log(`Fetched variation ${variationId} for product ${productId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching variation ${variationId} for product ${productId}:`, error);
@@ -474,7 +467,6 @@ export const createProductVariations = async (productId: number, variations: Rec
     }
     
     console.log(`Creating ${variations.length} variations for product ${productId}`);
-    console.log("Variation data:", JSON.stringify(variations, null, 2));
     
     const createPromises = variations.map(variation => {
       if (!variation || typeof variation !== 'object') {
@@ -496,6 +488,7 @@ export const createProductVariations = async (productId: number, variations: Rec
     }
     
     const responses = await Promise.all(createPromises);
+    console.log(`Successfully created ${responses.filter(Boolean).length} variations`);
     return responses.map(response => response?.data).filter(Boolean);
   } catch (error) {
     console.error(`Error creating variations for product ${productId}:`, error);
@@ -511,7 +504,6 @@ export const updateProductVariations = async (productId: number, variations: Rec
     }
     
     console.log(`Updating ${variations.length} variations for product ${productId}`);
-    console.log("Variation data:", JSON.stringify(variations, null, 2));
     
     const updatePromises = variations.map(variation => {
       if (!variation || typeof variation !== 'object') {
@@ -536,6 +528,7 @@ export const updateProductVariations = async (productId: number, variations: Rec
     }
     
     const responses = await Promise.all(updatePromises);
+    console.log(`Successfully updated ${responses.filter(Boolean).length} variations`);
     return responses.map(response => response?.data).filter(Boolean);
   } catch (error) {
     console.error(`Error updating variations for product ${productId}:`, error);
@@ -546,6 +539,7 @@ export const updateProductVariations = async (productId: number, variations: Rec
 export const deleteProductVariation = async (productId: number, variationId: number) => {
   try {
     const response = await wcApiClient.delete(`/products/${productId}/variations/${variationId}`);
+    console.log(`Deleted variation ${variationId} for product ${productId}`);
     return response.data;
   } catch (error) {
     console.error(`Error deleting variation ${variationId} for product ${productId}:`, error);

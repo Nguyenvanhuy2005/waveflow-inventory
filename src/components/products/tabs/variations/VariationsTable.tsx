@@ -10,7 +10,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Trash, LoaderCircle, Image } from "lucide-react";
+import { Trash, LoaderCircle, Image as ImageIcon, Camera } from "lucide-react";
 import { useRef } from "react";
 
 interface Variation {
@@ -58,14 +58,9 @@ const VariationsTable = ({
       onSelectVariationImage(index, e.target.files[0]);
     }
   };
-  
-  // Debug function to check variation data
-  const debugVariation = (index: number) => {
-    console.log(`Variation ${index} data:`, variations[index]);
-  };
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
@@ -98,7 +93,7 @@ const VariationsTable = ({
             </TableRow>
           ) : (
             variations.map((variation, index) => (
-              <TableRow key={index} onClick={() => debugVariation(index)}>
+              <TableRow key={index}>
                 <TableCell>
                   {variation.id || <span className="text-muted-foreground italic">Mới</span>}
                 </TableCell>
@@ -154,7 +149,7 @@ const VariationsTable = ({
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <div 
-                      className="w-10 h-10 border rounded cursor-pointer flex items-center justify-center bg-muted/30 overflow-hidden"
+                      className="w-12 h-12 border rounded cursor-pointer flex items-center justify-center bg-muted/30 overflow-hidden transition-all hover:opacity-80"
                       onClick={() => handleImageClick(index)}
                     >
                       {variation.image && variation.image.src ? (
@@ -164,7 +159,10 @@ const VariationsTable = ({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Image className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                          <Camera className="h-5 w-5" />
+                          <span className="text-xs mt-1">Thêm</span>
+                        </div>
                       )}
                     </div>
                     <input
@@ -176,7 +174,9 @@ const VariationsTable = ({
                     />
                     {variation.image?.id ? (
                       <span className="text-xs text-muted-foreground">ID: {variation.image.id}</span>
-                    ) : null}
+                    ) : (
+                      variation.id && <span className="text-xs text-muted-foreground italic">Chưa có ảnh</span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>

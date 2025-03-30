@@ -42,6 +42,7 @@ const ProductForm = ({
   const [selectedTab, setSelectedTab] = useState("general");
   const [productType, setProductType] = useState("variable"); // Always set to variable
   const [variations, setVariations] = useState<any[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Initialize form with product data if editing
   const form = useForm<z.infer<typeof ProductFormSchema>>({
@@ -72,6 +73,8 @@ const ProductForm = ({
 
   // Update form values when product data changes
   useEffect(() => {
+    console.log("Setting form values from product data:", product);
+    
     if (product) {
       const categories = product.categories?.map((cat: any) => cat.id) || [];
       
@@ -103,7 +106,28 @@ const ProductForm = ({
       // Set variations if they exist
       if (product.variationsDetails && Array.isArray(product.variationsDetails)) {
         console.log("Loading existing variations:", product.variationsDetails);
-        setVariations(product.variationsDetails);
+        // Ensure variations have all required properties
+        const processedVariations = product.variationsDetails.map((variation: any) => {
+          // Make sure variation has attributes array
+          if (!variation.attributes || !Array.isArray(variation.attributes)) {
+            variation.attributes = [];
+          }
+          
+          // Ensure essential properties exist
+          return {
+            id: variation.id,
+            regular_price: variation.regular_price || "",
+            sale_price: variation.sale_price || "",
+            sku: variation.sku || "",
+            stock_quantity: variation.stock_quantity || 0,
+            stock_status: variation.stock_status || "instock",
+            manage_stock: variation.manage_stock || false,
+            attributes: variation.attributes,
+            image: variation.image || null
+          };
+        });
+        
+        setVariations(processedVariations);
       } else {
         setVariations([]);
       }
@@ -111,7 +135,8 @@ const ProductForm = ({
       // Load existing images
       if (product.images && Array.isArray(product.images)) {
         console.log("Loading existing product images:", product.images);
-        setImagePreviewUrls(product.images.map((img: any) => img.src));
+        const validImages = product.images.filter((img: any) => img && img.src);
+        setImagePreviewUrls(validImages.map((img: any) => img.src));
       }
     }
   }, [product, form]);
@@ -119,22 +144,32 @@ const ProductForm = ({
   // Handler to upload variation image
   const handleUploadVariationImage = async (productId: number | null, variationId: number | undefined, file: File) => {
     if (!productId || !variationId) {
+      toast.error("Sản phẩm hoặc biến thể chưa được lưu. Vui lòng lưu sản phẩm trước.");
       throw new Error("Product ID and variation ID are required to upload an image");
     }
     
     try {
+      setIsUploadingImage(true);
       console.log(`Uploading image for variation ${variationId} of product ${productId}`);
       const response = await uploadProductVariationImage(productId, variationId, file);
       console.log("Variation image upload response:", response);
+      setIsUploadingImage(false);
       return response;
     } catch (error) {
+      setIsUploadingImage(false);
       console.error("Error uploading variation image:", error);
+      toast.error("Không thể tải lên hình ảnh cho biến thể. Vui lòng thử lại.");
       throw error;
     }
   };
 
   const mutation = useMutation({
     mutationFn: (data: any) => {
+      // Show loading toast
+      const loadingToast = toast.loading(
+        isNewProduct ? "Đang tạo sản phẩm..." : "Đang cập nhật sản phẩm..."
+      );
+      
       // Prepare the data for API submission
       const preparedData = { ...data };
       
@@ -149,13 +184,15 @@ const ProductForm = ({
       // Add attributes with proper formatting for WooCommerce API
       if (selectedAttributes && selectedAttributes.length > 0) {
         preparedData.attributes = selectedAttributes.map(attr => ({
-          id: attr.id,
-          name: attr.name,
+          id: attr.id || 0,
+          name: attr.name || "",
           position: attr.position || 0,
           visible: attr.visible === undefined ? true : attr.visible,
           variation: attr.variation === undefined ? false : attr.variation,
           options: Array.isArray(attr.options) ? attr.options : []
         }));
+        
+        console.log("Prepared attributes for API:", preparedData.attributes);
       } else {
         preparedData.attributes = [];
       }
@@ -171,17 +208,20 @@ const ProductForm = ({
       
       // Add selected images to the product data
       if (selectedImages && selectedImages.length > 0) {
+        console.log(`Adding ${selectedImages.length} new images to product`);
         preparedData.images = selectedImages;
       }
       
       // If we have existing images from the product, include them
       if (!isNewProduct && product && product.images && Array.isArray(product.images)) {
-        // Include existing images in the update
+        const existingImages = product.images.filter((img: any) => img && img.id && img.src);
+        console.log(`Found ${existingImages.length} existing images`);
+        
         if (!preparedData.images) {
-          preparedData.images = [...product.images];
+          preparedData.images = [...existingImages];
         } else {
-          // Add the File objects to the array that already has existing images
-          preparedData.images = [...product.images, ...preparedData.images];
+          // We only send file objects for new images, existing images are kept separate
+          console.log("Keeping existing images in update");
         }
       }
       
@@ -189,7 +229,11 @@ const ProductForm = ({
       
       return isNewProduct
         ? createProduct(preparedData)
-        : updateProduct(productId!, preparedData);
+        : updateProduct(productId!, preparedData)
+        .finally(() => {
+          // Dismiss loading toast
+          toast.dismiss(loadingToast);
+        });
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["product", productId] });
@@ -203,7 +247,7 @@ const ProductForm = ({
       console.log("API Response:", response);
       
       if (isNewProduct) {
-        navigate("/products");
+        navigate(`/products/${response.id}`);
       }
     },
     onError: (error: any) => {
@@ -241,18 +285,6 @@ const ProductForm = ({
       return;
     }
     
-    // Check for missing attributes in variations
-    if (variations.length > 0) {
-      const missingAttributes = variations.some(v => 
-        !v.attributes || !Array.isArray(v.attributes) || v.attributes.length === 0
-      );
-      
-      if (missingAttributes) {
-        console.warn("Some variations are missing attributes, they will be generated from selected attributes");
-        // We'll let the API handle this, as it's fixed in the API submission process
-      }
-    }
-    
     // Prepare the data for submission
     const formData = {
       ...values,
@@ -283,12 +315,15 @@ const ProductForm = ({
           setSelectedImages={setSelectedImages}
           setImagePreviewUrls={setImagePreviewUrls}
           uploadVariationImage={handleUploadVariationImage}
+          isUploadingImage={isUploadingImage}
         />
         
-        <div className="mt-4 flex justify-end">
+        <div className="mt-8 flex justify-end">
           <Button 
             type="submit"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isUploadingImage}
+            size="lg"
+            className="px-6"
           >
             {mutation.isPending ? (
               <>
@@ -297,8 +332,8 @@ const ProductForm = ({
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
-                Lưu
+                <Save className="mr-2 h-5 w-5" />
+                Lưu sản phẩm
               </>
             )}
           </Button>

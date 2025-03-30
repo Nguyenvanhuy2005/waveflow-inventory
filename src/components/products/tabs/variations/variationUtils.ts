@@ -66,6 +66,8 @@ export const generateVariationCombinations = (
 
     // For each option of the current attribute
     for (const option of currentAttr.options) {
+      if (!option) continue; // Skip empty options
+      
       // Add this attribute-option pair to current combination
       currentCombination.push({
         name: currentAttr.name,
@@ -81,7 +83,7 @@ export const generateVariationCombinations = (
   };
 
   generateCombinations(attributesForVariation, 0, [], combinations);
-  console.log("Generated combinations:", combinations);
+  console.log(`Generated ${combinations.length} combinations`);
   return combinations;
 };
 
@@ -167,9 +169,9 @@ export const applyBulkActionToVariations = (
       break;
       
     case "set_sku":
-      updatedVariations.forEach(variation => {
+      updatedVariations.forEach((variation, index) => {
         // Generate SKU with format SC+variation_id if exists, otherwise SC+index
-        const variationId = variation.id || Math.floor(Math.random() * 1000);
+        const variationId = variation.id || index + 1;
         variation.sku = `SC${variationId}`;
       });
       break;
@@ -254,55 +256,6 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
     
     return formattedVariation;
   }).filter(variation => Object.keys(variation).length > 0); // Filter out empty variations
-};
-
-/**
- * Find matching variation IDs from existing product data
- */
-export const findMatchingVariationIds = (
-  combinations: AttributeOption[][],
-  existingVariations: any[]
-): number[] => {
-  if (!Array.isArray(existingVariations) || existingVariations.length === 0) {
-    return [];
-  }
-  
-  // Create signatures for all combinations
-  const combinationSignatures = combinations.map(combination => 
-    combination
-      .map(attr => `${attr.name}:${attr.option}`)
-      .sort()
-      .join('|')
-  );
-  
-  // Find matching variations from existing data
-  const matchingVariationIds: number[] = [];
-  
-  existingVariations.forEach(variation => {
-    if (variation && typeof variation === 'object' && 
-        variation.attributes && Array.isArray(variation.attributes) &&
-        variation.id) {
-      
-      const variationSignature = variation.attributes
-        .map((attr: any) => `${attr.name}:${attr.option}`)
-        .sort()
-        .join('|');
-      
-      if (combinationSignatures.includes(variationSignature)) {
-        matchingVariationIds.push(variation.id);
-      }
-    }
-  });
-  
-  return matchingVariationIds;
-};
-
-/**
- * Generate a unique SKU for each variation based on product SKU and variation ID
- */
-export const generateVariationSku = (baseSku: string, variationId: number | undefined): string => {
-  if (!variationId) return baseSku ? `${baseSku}-variant` : '';
-  return baseSku ? `${baseSku}-${variationId}` : `SC${variationId}`;
 };
 
 /**

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Grid, RotateCcw, LoaderCircle, AlertCircle } from "lucide-react";
+import { Grid, RotateCcw, LoaderCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import NoVariationsState from "./NoVariationsState";
 import BulkActions from "./BulkActions";
@@ -12,7 +12,6 @@ import {
   generateVariationCombinations, 
   createVariationsFromCombinations, 
   applyBulkActionToVariations,
-  findMatchingVariationIds,
   updateVariationImage
 } from "./variationUtils";
 
@@ -46,6 +45,7 @@ interface VariationsTabProps {
   isLoadingVariations?: boolean;
   uploadVariationImage?: (productId: number | null, variationId: number | undefined, file: File) => Promise<any>;
   productId: number | null;
+  isUploadingImage?: boolean;
 }
 
 const VariationsTab = ({ 
@@ -57,13 +57,13 @@ const VariationsTab = ({
   setVariations,
   isLoadingVariations = false,
   uploadVariationImage,
-  productId
+  productId,
+  isUploadingImage = false
 }: VariationsTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [deleteVariationIndex, setDeleteVariationIndex] = useState<number | null>(null);
   const [isDeleteVariationDialogOpen, setIsDeleteVariationDialogOpen] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [attributeWarning, setAttributeWarning] = useState<string | null>(null);
 
   // Debug current variations data
@@ -99,10 +99,11 @@ const VariationsTab = ({
     }
 
     setIsGenerating(true);
+    toast.loading("Đang tạo biến thể...");
 
     try {
       // Get all combinations
-      const combinations = generateVariationCombinations(selectedAttributes);
+      const combinations = generateVariationCombinations(variationAttributes);
       
       if (combinations.length === 0) {
         toast.error("Không thể tạo biến thể từ thuộc tính đã chọn");
@@ -151,7 +152,13 @@ const VariationsTab = ({
               .join('|');
             existingVariationsMap.set(signature, {
               id: variation.id,
-              image: variation.image
+              image: variation.image,
+              sku: variation.sku,
+              regular_price: variation.regular_price,
+              sale_price: variation.sale_price,
+              stock_quantity: variation.stock_quantity,
+              stock_status: variation.stock_status,
+              manage_stock: variation.manage_stock
             });
           }
         });
@@ -166,17 +173,22 @@ const VariationsTab = ({
             
             const existingData = existingVariationsMap.get(signature);
             if (existingData) {
+              // Copy all existing data
               variation.id = existingData.id;
+              variation.sku = existingData.sku || variation.sku;
+              variation.regular_price = existingData.regular_price || variation.regular_price;
+              variation.sale_price = existingData.sale_price || variation.sale_price;
+              variation.stock_quantity = existingData.stock_quantity !== undefined ? existingData.stock_quantity : variation.stock_quantity;
+              variation.stock_status = existingData.stock_status || variation.stock_status;
+              variation.manage_stock = existingData.manage_stock !== undefined ? existingData.manage_stock : variation.manage_stock;
               
               // Set image if it exists
               if (existingData.image) {
                 variation.image = existingData.image;
               }
-              
-              // Set SKU using the ID if it exists (SC + ID format)
-              if (!variation.sku && existingData.id) {
-                variation.sku = `SC${existingData.id}`;
-              }
+            } else if (!variation.sku) {
+              // Generate a SKU if none exists
+              variation.sku = `SC${Math.floor(Math.random() * 10000)}`;
             }
           }
         });
@@ -280,12 +292,10 @@ const VariationsTab = ({
     }
 
     try {
-      setIsUploadingImage(true);
       const variation = variations[index];
       
       if (!variation.id) {
         toast.warning("Cần lưu sản phẩm trước khi tải lên hình ảnh cho biến thể mới");
-        setIsUploadingImage(false);
         return;
       }
       
@@ -302,8 +312,6 @@ const VariationsTab = ({
     } catch (error) {
       console.error("Error uploading variation image:", error);
       toast.error("Có lỗi xảy ra khi tải lên hình ảnh");
-    } finally {
-      setIsUploadingImage(false);
     }
   };
 
@@ -337,7 +345,7 @@ const VariationsTab = ({
             >
               {isGenerating ? (
                 <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Đang tạo...
                 </>
               ) : (
@@ -363,7 +371,7 @@ const VariationsTab = ({
               {/* Variations table */}
               <VariationsTable 
                 variations={variations}
-                isLoadingVariations={isLoadingVariations || isUploadingImage}
+                isLoadingVariations={isLoadingVariations || isUploadingImage || isGenerating}
                 onUpdateVariation={updateVariation}
                 onDeleteVariation={confirmDeleteVariation}
                 onSelectVariationImage={handleSelectVariationImage}

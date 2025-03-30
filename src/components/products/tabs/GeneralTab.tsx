@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Image as ImageIcon, X, Plus, Upload } from "lucide-react";
+import { Image as ImageIcon, X, Plus, Upload, Camera } from "lucide-react";
+import { toast } from "sonner";
 
 interface GeneralTabProps {
   form: any;
@@ -30,6 +31,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(
     form.getValues("categories") || []
   );
@@ -39,6 +41,14 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
     setProductType("variable");
     form.setValue("type", "variable");
   }, []);
+
+  // Update selected categories when form values change
+  useEffect(() => {
+    const formCategories = form.getValues("categories");
+    if (formCategories && Array.isArray(formCategories)) {
+      setSelectedCategoryIds(formCategories);
+    }
+  }, [form]);
 
   // Handle category selection
   const handleCategoryChange = (categoryId: number) => {
@@ -85,9 +95,11 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
     });
     
     if (validFiles.length > 0) {
-      setSelectedImages(validFiles);
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+      setSelectedImages(prev => [...prev, ...validFiles]);
       const newUrls = [...imagePreviewUrls, ...validFileUrls];
       setImagePreviewUrls(newUrls);
+      toast.success(`Đã chọn ${validFiles.length} ảnh mới`);
     }
     
     // Reset file input
@@ -98,9 +110,20 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   
   // Remove image from preview
   const removeImage = (index: number) => {
+    // Remove from preview URLs
     const updatedUrls = [...imagePreviewUrls];
     updatedUrls.splice(index, 1);
     setImagePreviewUrls(updatedUrls);
+    
+    // Remove from selected files if it's a new file
+    if (index < selectedFiles.length) {
+      const updatedFiles = [...selectedFiles];
+      updatedFiles.splice(index, 1);
+      setSelectedFiles(updatedFiles);
+      setSelectedImages(updatedFiles);
+    }
+    
+    toast.info("Đã xóa ảnh khỏi danh sách");
   };
   
   // Trigger file input click
@@ -203,9 +226,9 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {selectedCategoryIds.map(id => {
                     const category = categories.find(c => c.id === id);
-                    return (
+                    return category ? (
                       <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                        {category?.name}
+                        {category.name}
                         <button 
                           type="button" 
                           onClick={() => handleCategoryChange(id)} 
@@ -214,7 +237,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
-                    );
+                    ) : null;
                   })}
                 </div>
               </div>
@@ -241,6 +264,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                     alt={`Product preview ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200"></div>
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
@@ -256,7 +280,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                 onClick={triggerFileInput}
                 className="flex flex-col items-center justify-center aspect-square border border-dashed rounded-md hover:bg-muted/50 transition-colors"
               >
-                <Plus className="h-8 w-8 mb-1 text-muted-foreground" />
+                <Camera className="h-8 w-8 mb-1 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Thêm ảnh</span>
               </button>
             </div>
@@ -280,6 +304,10 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                 Tải ảnh lên
               </Button>
             </div>
+            
+            <p className="text-xs text-muted-foreground text-center">
+              Tối đa 5MB cho mỗi ảnh. Định dạng hỗ trợ: JPG, PNG, GIF, WEBP
+            </p>
           </div>
         </CardContent>
       </Card>

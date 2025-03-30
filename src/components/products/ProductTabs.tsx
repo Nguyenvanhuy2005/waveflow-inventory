@@ -24,6 +24,7 @@ interface ProductTabsProps {
   setSelectedImages: (files: File[]) => void;
   setImagePreviewUrls: (urls: string[]) => void;
   uploadVariationImage?: (productId: number | null, variationId: number | undefined, file: File) => Promise<any>;
+  isUploadingImage?: boolean;
 }
 
 const ProductTabs = ({
@@ -42,7 +43,8 @@ const ProductTabs = ({
   setVariations,
   setSelectedImages,
   setImagePreviewUrls,
-  uploadVariationImage
+  uploadVariationImage,
+  isUploadingImage = false
 }: ProductTabsProps) => {
   const { data: categories } = useQuery({
     queryKey: ["product-categories"],
@@ -129,6 +131,7 @@ const ProductTabs = ({
           setVariations={setVariations}
           isLoadingVariations={false}
           uploadVariationImage={uploadVariationImage}
+          isUploadingImage={isUploadingImage}
         />
       </TabsContent>
     </Tabs>

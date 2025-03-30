@@ -37,14 +37,16 @@ const ProductDetail = () => {
   // Update data when product is loaded
   useEffect(() => {
     if (product) {
+      console.log("Product loaded:", product);
+      
       // Update product attributes if available
       if (product.attributes && product.attributes.length > 0) {
         console.log("Loading product attributes:", product.attributes);
         
         // Process attributes to ensure they have all required properties
         const processedAttributes = product.attributes.map(attr => ({
-          id: attr.id,
-          name: attr.name,
+          id: attr.id || 0,
+          name: attr.name || "",
           position: attr.position || 0,
           visible: attr.visible !== undefined ? attr.visible : true,
           variation: attr.variation !== undefined ? attr.variation : false,
@@ -63,12 +65,13 @@ const ProductDetail = () => {
 
       // Update image preview URLs if available
       if (product.images && product.images.length > 0) {
-        setImagePreviewUrls(product.images.map(img => img.src));
+        const validImages = product.images.filter(img => img && img.src);
+        console.log("Product images found:", validImages.length);
+        setImagePreviewUrls(validImages.map(img => img.src));
       } else {
+        console.log("No product images found");
         setImagePreviewUrls([]);
       }
-      
-      console.log("Loaded product data:", product);
     }
   }, [product]);
 
