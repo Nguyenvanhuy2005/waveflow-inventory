@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDashboardData } from "../services/dashboardService";
 import { StatsCard } from "../components/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, PackageOpen, ShoppingCart, Users } from "lucide-react";
+import { BarChart3, PackageOpen, ShoppingCart, Users, AlertCircle } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { StatusBadge } from "../components/StatusBadge";
 import { Link } from "react-router-dom";
@@ -18,9 +18,10 @@ import {
   CartesianGrid, 
   Tooltip
 } from "recharts";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Dashboard = () => {
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: ["dashboardData"],
     queryFn: getDashboardData,
   });
@@ -38,12 +39,33 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 my-4">
-        <h3 className="text-lg font-semibold">Không thể tải dữ liệu</h3>
-        <p>Vui lòng kiểm tra kết nối API hoặc thử lại sau.</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-4">Tổng quan</h1>
+        </div>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Không thể tải dữ liệu</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <p>Vui lòng kiểm tra kết nối API hoặc thử lại sau.</p>
+            <Button onClick={() => refetch()} variant="outline" size="sm" className="self-start">
+              Thử lại
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
+
+  // Đảm bảo dữ liệu đầy đủ để tránh lỗi
+  const dashboardData = {
+    totalOrders: data?.totalOrders || 0,
+    totalRevenue: data?.totalRevenue || 0,
+    lowStockProducts: data?.lowStockProducts || [],
+    topCustomers: data?.topCustomers || [],
+    recentOrders: data?.recentOrders || [],
+    revenueData: data?.revenueData || [],
+  };
 
   return (
     <div className="space-y-6">
@@ -54,25 +76,25 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Tổng doanh thu"
-          value={formatCurrency(data?.totalRevenue || 0)}
+          value={formatCurrency(dashboardData.totalRevenue)}
           description="30 ngày qua"
           icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
           title="Đơn hàng"
-          value={data?.totalOrders || 0}
+          value={dashboardData.totalOrders}
           description="30 ngày qua"
           icon={<ShoppingCart className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
           title="Sản phẩm sắp hết"
-          value={data?.lowStockProducts?.length || 0}
+          value={dashboardData.lowStockProducts.length}
           description="Cần nhập thêm"
           icon={<PackageOpen className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
           title="Khách hàng hàng đầu"
-          value={data?.topCustomers?.length || 0}
+          value={dashboardData.topCustomers.length}
           description="Theo doanh thu"
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
@@ -84,23 +106,29 @@ const Dashboard = () => {
             <CardTitle>Doanh thu theo ngày</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data?.revenueData || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(value) => formatDate(value, 'dd/MM')}
-                />
-                <YAxis 
-                  tickFormatter={(value) => formatCurrency(value, {notation: 'compact'})}
-                />
-                <Tooltip 
-                  formatter={(value: number) => formatCurrency(value)}
-                  labelFormatter={(label) => formatDate(label, 'dd/MM/yyyy')}
-                />
-                <Bar dataKey="amount" fill="#3b82f6" name="Doanh thu" />
-              </BarChart>
-            </ResponsiveContainer>
+            {dashboardData.revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={dashboardData.revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => formatDate(value, 'dd/MM')}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => formatCurrency(value, {notation: 'compact'})}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelFormatter={(label) => formatDate(label, 'dd/MM/yyyy')}
+                  />
+                  <Bar dataKey="amount" fill="#3b82f6" name="Doanh thu" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                Không có dữ liệu doanh thu trong 30 ngày qua
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -112,9 +140,9 @@ const Dashboard = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            {data?.lowStockProducts && data.lowStockProducts.length > 0 ? (
+            {dashboardData.lowStockProducts && dashboardData.lowStockProducts.length > 0 ? (
               <div className="space-y-4">
-                {data.lowStockProducts.slice(0, 5).map((product) => (
+                {dashboardData.lowStockProducts.slice(0, 5).map((product) => (
                   <div key={product.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {product.images && product.images[0] ? (
@@ -158,44 +186,50 @@ const Dashboard = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            <DataTable
-              columns={[
-                {
-                  header: "Mã đơn hàng",
-                  accessorKey: "number",
-                  cell: (row) => (
-                    <Link to={`/orders/${row.id}`} className="font-medium text-primary hover:underline">
-                      #{row.number}
-                    </Link>
-                  ),
-                },
-                {
-                  header: "Khách hàng",
-                  accessorKey: "billing.first_name",
-                  cell: (row) => (
-                    <div>
-                      {row.billing?.first_name} {row.billing?.last_name}
-                    </div>
-                  ),
-                },
-                {
-                  header: "Trạng thái",
-                  accessorKey: "status",
-                  cell: (row) => <StatusBadge status={row.status} type="order" />,
-                },
-                {
-                  header: "Ngày tạo",
-                  accessorKey: "date_created",
-                  cell: (row) => formatDate(row.date_created),
-                },
-                {
-                  header: "Tổng tiền",
-                  accessorKey: "total",
-                  cell: (row) => formatCurrency(parseFloat(row.total)),
-                },
-              ]}
-              data={data?.recentOrders || []}
-            />
+            {dashboardData.recentOrders && dashboardData.recentOrders.length > 0 ? (
+              <DataTable
+                columns={[
+                  {
+                    header: "Mã đơn hàng",
+                    accessorKey: "number",
+                    cell: (row) => (
+                      <Link to={`/orders/${row.id}`} className="font-medium text-primary hover:underline">
+                        #{row.number}
+                      </Link>
+                    ),
+                  },
+                  {
+                    header: "Khách hàng",
+                    accessorKey: "billing.first_name",
+                    cell: (row) => (
+                      <div>
+                        {row.billing?.first_name} {row.billing?.last_name}
+                      </div>
+                    ),
+                  },
+                  {
+                    header: "Trạng thái",
+                    accessorKey: "status",
+                    cell: (row) => <StatusBadge status={row.status} type="order" />,
+                  },
+                  {
+                    header: "Ngày tạo",
+                    accessorKey: "date_created",
+                    cell: (row) => formatDate(row.date_created),
+                  },
+                  {
+                    header: "Tổng tiền",
+                    accessorKey: "total",
+                    cell: (row) => formatCurrency(parseFloat(row.total)),
+                  },
+                ]}
+                data={dashboardData.recentOrders}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                Không có đơn hàng gần đây
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -9,8 +9,9 @@ export const getDashboardData = async () => {
   const today = new Date();
   const thirtyDaysAgo = subDays(today, 30);
   
-  const fromDate = format(thirtyDaysAgo, "yyyy-MM-dd");
-  const toDate = format(today, "yyyy-MM-dd");
+  // Chuyển sang định dạng ISO 8601 đầy đủ theo yêu cầu của WooCommerce API
+  const fromDate = format(thirtyDaysAgo, "yyyy-MM-dd'T'HH:mm:ss");
+  const toDate = format(today, "yyyy-MM-dd'T'HH:mm:ss");
   
   try {
     // Get orders for the last 30 days

@@ -138,12 +138,19 @@ export const getRecentOrders = async (limit: number = 10) => {
 };
 
 export const getOrdersByDateRange = async (from: string, to: string) => {
+  // Sử dụng đúng cú pháp cho tham số ngày tháng theo WooCommerce API
   const params = {
     after: from,
     before: to,
     per_page: 100,
   };
   
-  const response = await wcApiClient.get<Order[]>("/orders", { params });
-  return response.data;
+  try {
+    const response = await wcApiClient.get<Order[]>("/orders", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to get orders by date range:", error);
+    // Trả về mảng rỗng để không làm hỏng UI khi có lỗi
+    return [];
+  }
 };
