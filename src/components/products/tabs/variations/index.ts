@@ -1,2 +1,2 @@
 
-export { default as VariationsTab } from './VariationsTab';
+export { VariationsTab } from './VariationsTab';
