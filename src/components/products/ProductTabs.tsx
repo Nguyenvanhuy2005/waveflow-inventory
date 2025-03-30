@@ -1,11 +1,10 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { getProductCategories, getProductAttributes, getProductAttributeTerms } from "@/services/productService";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GeneralTab from "./tabs/GeneralTab";
 import InventoryTab from "./tabs/InventoryTab";
 import AttributesTab from "./tabs/AttributesTab";
-import VariationsTab from "./tabs/VariationsTab";
+import { VariationsTab } from "./tabs/variations";
 
 interface ProductTabsProps {
   form: any;
@@ -52,7 +51,6 @@ const ProductTabs = ({
     queryFn: () => getProductAttributes(),
   });
 
-  // Fetch all attribute terms for all attributes upfront
   const { data: attributeTerms, isLoading: loadingTerms } = useQuery({
     queryKey: ["all-attribute-terms", attributes?.map(attr => attr.id)],
     queryFn: async () => {
@@ -62,10 +60,8 @@ const ProductTabs = ({
         return results;
       }
 
-      // Fetch terms for all available attributes, not just selected ones
       for (const attr of attributes) {
         try {
-          // Skip custom attributes with id = 0
           if (attr.id > 0) {
             const terms = await getProductAttributeTerms(attr.id);
             results[attr.id] = terms;
