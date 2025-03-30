@@ -91,6 +91,7 @@ export interface Product {
     key: string;
     value: any;
   }[];
+  variationsDetails?: ProductVariation[];
 }
 
 export interface ProductAttribute {

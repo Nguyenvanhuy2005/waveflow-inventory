@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { ArrowUpDown, Plus, RotateCcw, Grid, LoaderCircle, AlertCircle } from "lucide-react";
+import { ArrowUpDown, Plus, RotateCcw, Grid, LoaderCircle, AlertCircle, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
@@ -62,6 +63,8 @@ const VariationsTab = ({
 }: VariationsTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [deleteVariationIndex, setDeleteVariationIndex] = useState<number | null>(null);
+  const [isDeleteVariationDialogOpen, setIsDeleteVariationDialogOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<string>("");
   const [bulkPrice, setBulkPrice] = useState<string>("");
   const [bulkSalePrice, setBulkSalePrice] = useState<string>("");
@@ -195,6 +198,23 @@ const VariationsTab = ({
     setVariations(updatedVariations);
   };
 
+  // Delete a variation
+  const confirmDeleteVariation = (index: number) => {
+    setDeleteVariationIndex(index);
+    setIsDeleteVariationDialogOpen(true);
+  };
+
+  const deleteVariation = () => {
+    if (deleteVariationIndex !== null) {
+      const updatedVariations = [...variations];
+      updatedVariations.splice(deleteVariationIndex, 1);
+      setVariations(updatedVariations);
+      toast.success("Đã xóa biến thể");
+    }
+    setIsDeleteVariationDialogOpen(false);
+    setDeleteVariationIndex(null);
+  };
+
   // Apply bulk action to all variations
   const applyBulkAction = () => {
     if (!bulkAction) return;
@@ -224,6 +244,15 @@ const VariationsTab = ({
         toast.success("Đã cập nhật giá khuyến mãi cho tất cả biến thể");
         break;
         
+      case "set_sku":
+        updatedVariations.forEach((variation, index) => {
+          // Generate SKU with format SC+variation_id
+          const variationId = variation.id || index;
+          variation.sku = `SC${variationId}`;
+        });
+        toast.success("Đã cập nhật SKU cho tất cả biến thể theo định dạng SC+id");
+        break;
+        
       default:
         break;
     }
@@ -240,26 +269,6 @@ const VariationsTab = ({
     setVariations([]);
     toast.info("Đã xóa tất cả biến thể");
   };
-
-  // Return early if product type is not variable
-  if (productType !== 'variable') {
-    return (
-      <div className="space-y-4 pt-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center py-8 space-y-3 text-center">
-              <AlertCircle className="h-10 w-10 text-muted-foreground" />
-              <h3 className="text-lg font-medium">Không phải sản phẩm biến thể</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Để quản lý biến thể, vui lòng chuyển loại sản phẩm sang "Sản phẩm có biến thể" 
-                trong tab Thông tin cơ bản
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4 pt-4">
@@ -340,6 +349,7 @@ const VariationsTab = ({
                         <SelectContent>
                           <SelectItem value="set_regular_price">Đặt giá gốc</SelectItem>
                           <SelectItem value="set_sale_price">Đặt giá khuyến mãi</SelectItem>
+                          <SelectItem value="set_sku">Đặt SKU (SC+id)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -383,18 +393,19 @@ const VariationsTab = ({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[30%]">Biến thể</TableHead>
-                      <TableHead className="w-[15%]">Giá gốc</TableHead>
-                      <TableHead className="w-[15%]">Giá khuyến mãi</TableHead>
-                      <TableHead className="w-[20%]">SKU</TableHead>
+                      <TableHead className="w-[25%]">Biến thể</TableHead>
+                      <TableHead className="w-[14%]">Giá gốc</TableHead>
+                      <TableHead className="w-[14%]">Giá khuyến mãi</TableHead>
+                      <TableHead className="w-[18%]">SKU</TableHead>
                       <TableHead className="w-[10%]">Tồn kho</TableHead>
                       <TableHead className="w-[10%]">Quản lý kho</TableHead>
+                      <TableHead className="w-[9%]">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoadingVariations ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={7} className="h-24 text-center">
                           <div className="flex items-center justify-center">
                             <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
                             <span>Đang tải biến thể...</span>
@@ -448,6 +459,16 @@ const VariationsTab = ({
                               />
                             </div>
                           </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => confirmDeleteVariation(index)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -472,6 +493,24 @@ const VariationsTab = ({
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={clearAllVariations} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Xóa tất cả
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for deleting a single variation */}
+      <AlertDialog open={isDeleteVariationDialogOpen} onOpenChange={setIsDeleteVariationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa biến thể?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa biến thể này?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteVariation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

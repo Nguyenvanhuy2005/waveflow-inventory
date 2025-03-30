@@ -39,7 +39,7 @@ const ProductForm = ({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState("general");
-  const [productType, setProductType] = useState(product?.type || "simple");
+  const [productType, setProductType] = useState("variable"); // Always set to variable
   const [variations, setVariations] = useState<any[]>(product?.variations || []);
 
   // Initialize form with product data if editing
@@ -47,11 +47,9 @@ const ProductForm = ({
     resolver: zodResolver(ProductFormSchema),
     defaultValues: {
       name: product?.name || "",
-      type: product?.type || "simple",
+      type: "variable", // Always set to variable
       regular_price: product?.regular_price || "",
       sale_price: product?.sale_price || "",
-      description: product?.description || "",
-      short_description: product?.short_description || "",
       sku: product?.sku || "",
       manage_stock: product?.manage_stock || false,
       stock_quantity: product?.stock_quantity || 0,
@@ -60,7 +58,6 @@ const ProductForm = ({
       categories: product?.categories?.map((cat: any) => cat.id) || [],
       status: product?.status || "publish",
       featured: product?.featured || false,
-      sold_individually: product?.sold_individually || false,
       weight: product?.weight || "",
       dimensions: {
         length: product?.dimensions?.length || "",
@@ -79,11 +76,9 @@ const ProductForm = ({
       
       form.reset({
         name: product.name || "",
-        type: product.type || "simple",
+        type: "variable", // Always set to variable regardless of product type
         regular_price: product.regular_price || "",
         sale_price: product.sale_price || "",
-        description: product.description || "",
-        short_description: product.short_description || "",
         sku: product.sku || "",
         manage_stock: product.manage_stock || false,
         stock_quantity: product.stock_quantity || 0,
@@ -92,7 +87,6 @@ const ProductForm = ({
         categories: categories,
         status: product.status || "publish",
         featured: product.featured || false,
-        sold_individually: product.sold_individually || false,
         weight: product.weight || "",
         dimensions: {
           length: product.dimensions?.length || "",
@@ -103,7 +97,7 @@ const ProductForm = ({
         variations: [],
       });
       
-      setProductType(product.type || "simple");
+      setProductType("variable"); // Always set to variable
       
       // Set variations if they exist
       if (product.variations && Array.isArray(product.variations)) {
@@ -117,8 +111,8 @@ const ProductForm = ({
       // Prepare the data for API submission
       const preparedData = { ...data };
       
-      // Set the product type from state
-      preparedData.type = productType;
+      // Set the product type to variable
+      preparedData.type = "variable";
       
       // Format categories as expected by WooCommerce API
       if (preparedData.categories && preparedData.categories.length > 0) {
@@ -128,10 +122,8 @@ const ProductForm = ({
       // Add attributes
       preparedData.attributes = selectedAttributes;
       
-      // Add variations if product is variable
-      if (productType === "variable" && variations.length > 0) {
-        preparedData.variations = variations;
-      }
+      // Add variations
+      preparedData.variations = variations;
       
       console.log("Sending to API:", preparedData);
       
@@ -176,9 +168,9 @@ const ProductForm = ({
     // Prepare the data for submission
     const formData = {
       ...values,
-      type: productType,
+      type: "variable", // Always set to variable
       attributes: selectedAttributes,
-      variations: productType === "variable" ? variations : [],
+      variations: variations,
     };
     
     console.log("Submitting data:", formData);

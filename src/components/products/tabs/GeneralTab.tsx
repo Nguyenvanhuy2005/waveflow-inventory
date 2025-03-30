@@ -1,12 +1,11 @@
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Image as ImageIcon, X, Plus, Upload } from "lucide-react";
 
@@ -34,6 +33,12 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(
     form.getValues("categories") || []
   );
+
+  // Set product type to variable by default
+  React.useEffect(() => {
+    setProductType("variable");
+    form.setValue("type", "variable");
+  }, []);
 
   // Handle category selection
   const handleCategoryChange = (categoryId: number) => {
@@ -81,7 +86,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
     
     if (validFiles.length > 0) {
       setSelectedImages(validFiles);
-      setImagePreviewUrls(prevUrls => [...prevUrls, ...validFileUrls]);
+      const newUrls = [...imagePreviewUrls, ...validFileUrls];
+      setImagePreviewUrls(newUrls);
     }
     
     // Reset file input
@@ -92,11 +98,9 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   
   // Remove image from preview
   const removeImage = (index: number) => {
-    setImagePreviewUrls(prevUrls => {
-      const updatedUrls = [...prevUrls];
-      updatedUrls.splice(index, 1);
-      return updatedUrls;
-    });
+    const updatedUrls = [...imagePreviewUrls];
+    updatedUrls.splice(index, 1);
+    setImagePreviewUrls(updatedUrls);
   };
   
   // Trigger file input click
@@ -104,12 +108,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  };
-
-  // Handle product type change
-  const handleProductTypeChange = (value: string) => {
-    setProductType(value);
-    form.setValue("type", value);
   };
 
   return (
@@ -128,59 +126,6 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
                 <FormLabel>Tên sản phẩm</FormLabel>
                 <FormControl>
                   <Input placeholder="Nhập tên sản phẩm" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="space-y-2">
-            <FormLabel>Loại sản phẩm</FormLabel>
-            <Select 
-              value={productType} 
-              onValueChange={handleProductTypeChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Chọn loại sản phẩm" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="simple">Sản phẩm đơn giản</SelectItem>
-                <SelectItem value="variable">Sản phẩm có biến thể</SelectItem>
-                <SelectItem value="grouped">Sản phẩm nhóm</SelectItem>
-                <SelectItem value="external">Sản phẩm bên ngoài / liên kết</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mô tả sản phẩm</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Nhập mô tả chi tiết sản phẩm" 
-                    className="min-h-[120px]" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="short_description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mô tả ngắn</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Nhập mô tả ngắn gọn sản phẩm" 
-                    {...field} 
-                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
