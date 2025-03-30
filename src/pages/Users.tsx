@@ -1,16 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { UserSearchParams, getUsers, testWordPressApiConnection } from "@/services/userService";
 import { DataTable } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertCircle, RefreshCcw } from "lucide-react";
+import { Plus, AlertCircle, RefreshCcw, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { getStoredCredentials } from "@/services/apiConfig";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const Users = () => {
   const [searchParams, setSearchParams] = useState<UserSearchParams>({
@@ -21,7 +21,9 @@ const Users = () => {
     checked: boolean;
     success: boolean;
     message?: string;
+    details?: any;
   }>({ checked: false, success: false });
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["users", searchParams],
@@ -39,7 +41,10 @@ const Users = () => {
       setConnectionStatus({
         checked: true,
         success: result.success,
-        message: result.success ? "Kết nối WordPress API thành công" : `Kết nối thất bại: ${result.error}`,
+        message: result.success 
+          ? "Kết nối WordPress API thành công" 
+          : `Kết nối thất bại: ${result.error}`,
+        details: result.details || {}
       });
       
       if (!result.success) {
@@ -80,7 +85,7 @@ const Users = () => {
         </Alert>
         <Button asChild>
           <Link to="/settings">
-            Đi đến Cài đặt
+            <Settings className="mr-2 h-4 w-4" /> Đi đến Cài đặt
           </Link>
         </Button>
       </div>
@@ -106,10 +111,29 @@ const Users = () => {
           </Button>
           <Button variant="outline" asChild>
             <Link to="/settings">
-              Kiểm tra cài đặt
+              <Settings className="mr-2 h-4 w-4" /> Kiểm tra cài đặt
             </Link>
           </Button>
+          <Button variant="secondary" onClick={() => setShowErrorDetails(true)}>
+            Xem chi tiết lỗi
+          </Button>
         </div>
+
+        <Dialog open={showErrorDetails} onOpenChange={setShowErrorDetails}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Chi tiết lỗi kết nối</DialogTitle>
+              <DialogDescription>
+                Thông tin lỗi có thể giúp bạn khắc phục vấn đề kết nối.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="bg-muted p-4 rounded-md overflow-auto max-h-[400px]">
+              <pre className="whitespace-pre-wrap text-sm">
+                {JSON.stringify(connectionStatus.details, null, 2)}
+              </pre>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
