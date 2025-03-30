@@ -1,4 +1,3 @@
-
 import { wcApiClient } from "./apiConfig";
 
 export interface Product {
@@ -190,6 +189,26 @@ export const uploadProductImage = async (productId: number, formData: FormData) 
     return response.data;
   } catch (error) {
     console.error("Error uploading product image:", error);
+    throw error;
+  }
+};
+
+export const uploadMultipleProductImages = async (productId: number, images: File[]) => {
+  try {
+    const uploadPromises = images.map(image => {
+      const formData = new FormData();
+      formData.append('image', image);
+      return wcApiClient.post(`/products/${productId}/images`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    });
+    
+    const responses = await Promise.all(uploadPromises);
+    return responses.map(response => response.data);
+  } catch (error) {
+    console.error("Error uploading multiple product images:", error);
     throw error;
   }
 };
