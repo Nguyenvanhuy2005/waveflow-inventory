@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +19,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Order } from "@/services/orderService";
 
 const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +37,7 @@ const CustomerDetail = () => {
 
   const { data: customerOrders, isPending: isOrdersLoading } = useQuery({
     queryKey: ["customerOrders", customerId],
-    queryFn: () => (customerId ? getCustomerOrders(customerId) : Promise.resolve([])),
+    queryFn: () => (customerId ? getCustomerOrders(customerId) : Promise.resolve([]) as Promise<Order[]>),
     enabled: !isNewCustomer && !!customerId,
   });
 
@@ -88,7 +88,7 @@ const CustomerDetail = () => {
 
   const displayCustomer = isNewCustomer ? {} : { ...customer, ...customerData };
   const totalSpent = customerOrders?.reduce(
-    (sum: number, order: any) => sum + parseFloat(order.total || "0"),
+    (sum: number, order: Order) => sum + parseFloat(order.total || "0"),
     0
   ) || 0;
 
@@ -331,7 +331,7 @@ const CustomerDetail = () => {
                         {
                           header: "Mã đơn hàng",
                           accessorKey: "number",
-                          cell: (row) => (
+                          cell: (row: Order) => (
                             <Link
                               to={`/orders/${row.id}`}
                               className="font-medium text-primary hover:underline"
@@ -343,12 +343,12 @@ const CustomerDetail = () => {
                         {
                           header: "Ngày tạo",
                           accessorKey: "date_created",
-                          cell: (row) => formatDate(row.date_created),
+                          cell: (row: Order) => formatDate(row.date_created),
                         },
                         {
                           header: "Trạng thái",
                           accessorKey: "status",
-                          cell: (row) => (
+                          cell: (row: Order) => (
                             <StatusBadge
                               status={row.status}
                               type="order"
@@ -358,7 +358,7 @@ const CustomerDetail = () => {
                         {
                           header: "Tổng tiền",
                           accessorKey: "total",
-                          cell: (row) =>
+                          cell: (row: Order) =>
                             formatCurrency(parseFloat(row.total || "0")),
                         },
                       ]}

@@ -2,6 +2,9 @@
 import axios from "axios";
 import { ApiCredentials, STOCKWAVE_API_BASE_URL, storeCredentials, wcApiClient } from "./apiConfig";
 
+// Export the ApiCredentials interface for use in other files
+export type { ApiCredentials };
+
 export const saveApiCredentials = async (credentials: ApiCredentials) => {
   storeCredentials(credentials);
   return { success: true };
