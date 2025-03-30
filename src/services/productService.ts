@@ -111,6 +111,60 @@ export interface ProductAttributeTerm {
   count: number;
 }
 
+export interface ProductVariation {
+  id: number;
+  date_created: string;
+  date_modified: string;
+  description: string;
+  permalink: string;
+  sku: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  date_on_sale_from: string | null;
+  date_on_sale_to: string | null;
+  on_sale: boolean;
+  status: string;
+  purchasable: boolean;
+  virtual: boolean;
+  downloadable: boolean;
+  download_limit: number;
+  download_expiry: number;
+  tax_status: string;
+  tax_class: string;
+  manage_stock: boolean;
+  stock_quantity: number | null;
+  stock_status: string;
+  backorders: string;
+  backorders_allowed: boolean;
+  backordered: boolean;
+  weight: string;
+  dimensions: {
+    length: string;
+    width: string;
+    height: string;
+  };
+  shipping_class: string;
+  shipping_class_id: number;
+  image: {
+    id: number;
+    src: string;
+    name: string;
+    alt: string;
+  };
+  attributes: {
+    id: number;
+    name: string;
+    option: string;
+  }[];
+  menu_order: number;
+  meta_data: {
+    id: number;
+    key: string;
+    value: string;
+  }[];
+}
+
 export interface ProductSearchParams {
   search?: string;
   category?: string;
@@ -126,12 +180,23 @@ export const getProducts = async (params?: ProductSearchParams) => {
 
 export const getProduct = async (id: number) => {
   const response = await wcApiClient.get<Product>(`/products/${id}`);
+  
+  if (response.data.type === 'variable' && response.data.variations && response.data.variations.length > 0) {
+    const variationsDetails = await getProductVariations(id);
+    response.data.variationsDetails = variationsDetails;
+  }
+  
   return response.data;
 };
 
 export const createProduct = async (productData: Partial<Product>) => {
   try {
     const response = await wcApiClient.post<Product>("/products", productData);
+    
+    if (productData.type === 'variable' && productData.variations && productData.variations.length > 0 && response.data.id) {
+      await createProductVariations(response.data.id, productData.variations);
+    }
+    
     return response.data;
   } catch (error) {
     console.error("Error creating product:", error);
@@ -142,6 +207,11 @@ export const createProduct = async (productData: Partial<Product>) => {
 export const updateProduct = async (id: number, productData: Partial<Product>) => {
   try {
     const response = await wcApiClient.put<Product>(`/products/${id}`, productData);
+    
+    if (productData.type === 'variable' && productData.variations && productData.variations.length > 0) {
+      await updateProductVariations(id, productData.variations);
+    }
+    
     return response.data;
   } catch (error) {
     console.error(`Error updating product ${id}:`, error);
@@ -254,6 +324,82 @@ export const createProductAttributeTerm = async (attributeId: number, termData: 
     return response.data;
   } catch (error) {
     console.error("Error creating attribute term:", error);
+    throw error;
+  }
+};
+
+export const getProductVariations = async (productId: number) => {
+  try {
+    const response = await wcApiClient.get<ProductVariation[]>(`/products/${productId}/variations`, {
+      params: { per_page: 100 } // Fetch up to 100 variations
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching variations for product ${productId}:`, error);
+    return [];
+  }
+};
+
+export const getProductVariation = async (productId: number, variationId: number) => {
+  try {
+    const response = await wcApiClient.get<ProductVariation>(`/products/${productId}/variations/${variationId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching variation ${variationId} for product ${productId}:`, error);
+    throw error;
+  }
+};
+
+export const createProductVariations = async (productId: number, variations: any[]) => {
+  try {
+    const createPromises = variations.map(variation =>
+      wcApiClient.post(`/products/${productId}/variations`, variation)
+    );
+    
+    const responses = await Promise.all(createPromises);
+    return responses.map(response => response.data);
+  } catch (error) {
+    console.error(`Error creating variations for product ${productId}:`, error);
+    throw error;
+  }
+};
+
+export const updateProductVariation = async (productId: number, variationId: number, variationData: Partial<ProductVariation>) => {
+  try {
+    const response = await wcApiClient.put<ProductVariation>(
+      `/products/${productId}/variations/${variationId}`,
+      variationData
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating variation ${variationId} for product ${productId}:`, error);
+    throw error;
+  }
+};
+
+export const updateProductVariations = async (productId: number, variations: any[]) => {
+  try {
+    const updatePromises = variations.map(variation => {
+      if (variation.id) {
+        return wcApiClient.put(`/products/${productId}/variations/${variation.id}`, variation);
+      }
+      return wcApiClient.post(`/products/${productId}/variations`, variation);
+    });
+    
+    const responses = await Promise.all(updatePromises);
+    return responses.map(response => response.data);
+  } catch (error) {
+    console.error(`Error updating variations for product ${productId}:`, error);
+    throw error;
+  }
+};
+
+export const deleteProductVariation = async (productId: number, variationId: number) => {
+  try {
+    const response = await wcApiClient.delete(`/products/${productId}/variations/${variationId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting variation ${variationId} for product ${productId}:`, error);
     throw error;
   }
 };

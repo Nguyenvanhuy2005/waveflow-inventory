@@ -1,14 +1,14 @@
 
-import { useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Image as ImageIcon, X, Plus, Upload } from "lucide-react";
 
 interface GeneralTabProps {
   form: any;
@@ -16,48 +16,108 @@ interface GeneralTabProps {
   imagePreviewUrls: string[];
   setImagePreviewUrls: (urls: string[]) => void;
   setSelectedImages: (files: File[]) => void;
+  productType: string;
+  setProductType: (type: string) => void;
 }
 
-const GeneralTab = ({ form, categories, imagePreviewUrls, setImagePreviewUrls, setSelectedImages }: GeneralTabProps) => {
-  // State to manage files temporarily
-  const [files, setFiles] = useState<File[]>([]);
-  
+const GeneralTab: React.FC<GeneralTabProps> = ({ 
+  form, 
+  categories = [], 
+  imagePreviewUrls,
+  setImagePreviewUrls,
+  setSelectedImages,
+  productType,
+  setProductType
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(
+    form.getValues("categories") || []
+  );
+
+  // Handle category selection
+  const handleCategoryChange = (categoryId: number) => {
+    const isSelected = selectedCategoryIds.includes(categoryId);
+    
+    let updatedCategories;
+    if (isSelected) {
+      // Remove category if already selected
+      updatedCategories = selectedCategoryIds.filter(id => id !== categoryId);
+    } else {
+      // Add category if not selected
+      updatedCategories = [...selectedCategoryIds, categoryId];
+    }
+    
+    setSelectedCategoryIds(updatedCategories);
+    form.setValue("categories", updatedCategories);
+  };
+
+  // Handle image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const filesArray = Array.from(e.target.files);
+    setUploadError(null);
+    const files = e.target.files;
+    
+    if (!files || files.length === 0) return;
+    
+    const validFiles: File[] = [];
+    const validFileUrls: string[] = [];
+    
+    Array.from(files).forEach(file => {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError("Kích thước ảnh quá lớn. Tối đa 5MB cho mỗi ảnh.");
+        return;
+      }
       
-      // Update file state
-      setFiles(filesArray);
-      setSelectedImages(filesArray);
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setUploadError("Chỉ chấp nhận file ảnh (jpg, png, gif, webp).");
+        return;
+      }
       
-      // Create image preview URLs
-      const newImageUrls = filesArray.map(file => URL.createObjectURL(file));
-      setImagePreviewUrls(newImageUrls);
-      
-      // Reset the file input
-      e.target.value = '';
+      validFiles.push(file);
+      validFileUrls.push(URL.createObjectURL(file));
+    });
+    
+    if (validFiles.length > 0) {
+      setSelectedImages(validFiles);
+      setImagePreviewUrls(prevUrls => [...prevUrls, ...validFileUrls]);
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  // Remove image from preview
+  const removeImage = (index: number) => {
+    setImagePreviewUrls(prevUrls => {
+      const updatedUrls = [...prevUrls];
+      updatedUrls.splice(index, 1);
+      return updatedUrls;
+    });
+  };
+  
+  // Trigger file input click
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
-  const removeImage = (index: number) => {
-    // Revoke URL to prevent memory leaks
-    URL.revokeObjectURL(imagePreviewUrls[index]);
-    
-    // Create new arrays without the removed item
-    const newImagePreviewUrls = imagePreviewUrls.filter((_, i) => i !== index);
-    const newFiles = files.filter((_, i) => i !== index);
-    
-    // Update state
-    setFiles(newFiles);
-    setSelectedImages(newFiles);
-    setImagePreviewUrls(newImagePreviewUrls);
+  // Handle product type change
+  const handleProductTypeChange = (value: string) => {
+    setProductType(value);
+    form.setValue("type", value);
   };
 
   return (
     <div className="space-y-4 pt-4">
+      {/* Basic Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Thông tin sản phẩm</CardTitle>
+          <CardTitle>Thông tin cơ bản</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <FormField
@@ -65,132 +125,91 @@ const GeneralTab = ({ form, categories, imagePreviewUrls, setImagePreviewUrls, s
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tên sản phẩm <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Tên sản phẩm</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input placeholder="Nhập tên sản phẩm" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="sku"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mã SKU</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Trạng thái</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn trạng thái" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="publish">Đang bán</SelectItem>
-                      <SelectItem value="draft">Bản nháp</SelectItem>
-                      <SelectItem value="pending">Chờ phê duyệt</SelectItem>
-                      <SelectItem value="private">Riêng tư</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+          <div className="space-y-2">
+            <FormLabel>Loại sản phẩm</FormLabel>
+            <Select 
+              value={productType} 
+              onValueChange={handleProductTypeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn loại sản phẩm" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="simple">Sản phẩm đơn giản</SelectItem>
+                <SelectItem value="variable">Sản phẩm có biến thể</SelectItem>
+                <SelectItem value="grouped">Sản phẩm nhóm</SelectItem>
+                <SelectItem value="external">Sản phẩm bên ngoài / liên kết</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          
+
           <FormField
             control={form.control}
-            name="featured"
+            name="description"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+              <FormItem>
+                <FormLabel>Mô tả sản phẩm</FormLabel>
                 <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                  <Textarea 
+                    placeholder="Nhập mô tả chi tiết sản phẩm" 
+                    className="min-h-[120px]" 
+                    {...field} 
                   />
                 </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Sản phẩm nổi bật</FormLabel>
-                  <FormDescription>
-                    Hiển thị sản phẩm này trong danh sách nổi bật
-                  </FormDescription>
-                </div>
+                <FormMessage />
               </FormItem>
             )}
           />
-          
-          <div className="space-y-2">
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả đầy đủ</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      rows={5}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <FormField
-              control={form.control}
-              name="short_description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả ngắn</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      rows={3}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="short_description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mô tả ngắn</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Nhập mô tả ngắn gọn sản phẩm" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Pricing */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Giá sản phẩm</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="regular_price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Giá thường</FormLabel>
+                  <FormLabel>Giá gốc</FormLabel>
                   <FormControl>
-                    <Input {...field} type="text" />
+                    <Input placeholder="Ví dụ: 100000" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="sale_price"
@@ -198,88 +217,178 @@ const GeneralTab = ({ form, categories, imagePreviewUrls, setImagePreviewUrls, s
                 <FormItem>
                   <FormLabel>Giá khuyến mãi</FormLabel>
                   <FormControl>
-                    <Input {...field} type="text" />
+                    <Input placeholder="Ví dụ: 80000" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          
-          {/* Danh mục sản phẩm */}
+        </CardContent>
+      </Card>
+
+      {/* Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Danh mục</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-2">
-            <Label>Danh mục</Label>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
-              {categories?.map((category) => (
-                <div 
-                  key={category.id}
-                  className="flex items-center space-x-2"
-                >
-                  <Checkbox 
-                    id={`category-${category.id}`}
-                    checked={form.watch("categories")?.includes(category.id)}
-                    onCheckedChange={(checked) => {
-                      const currentCategories = form.getValues("categories") || [];
-                      if (checked) {
-                        form.setValue("categories", [...currentCategories, category.id]);
-                      } else {
-                        form.setValue("categories", 
-                          currentCategories.filter((id: number) => id !== category.id)
-                        );
-                      }
-                    }}
-                  />
-                  <label 
-                    htmlFor={`category-${category.id}`}
-                    className="text-sm"
-                  >
-                    {category.name}
-                  </label>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {categories && categories.length > 0 ? (
+                categories.map((category) => (
+                  <div key={category.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`category-${category.id}`}
+                      checked={selectedCategoryIds.includes(category.id)}
+                      onChange={() => handleCategoryChange(category.id)}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor={`category-${category.id}`}>{category.name}</label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Đang tải danh mục...</p>
+              )}
             </div>
+            {(selectedCategoryIds.length > 0 && categories) && (
+              <div className="mt-4">
+                <div className="text-sm font-medium mb-2">Danh mục đã chọn:</div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCategoryIds.map(id => {
+                    const category = categories.find(c => c.id === id);
+                    return (
+                      <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                        {category?.name}
+                        <button 
+                          type="button" 
+                          onClick={() => handleCategoryChange(id)} 
+                          className="ml-1 rounded-full hover:bg-muted p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-          
-          {/* Quản lý hình ảnh */}
+        </CardContent>
+      </Card>
+
+      {/* Images */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Hình ảnh sản phẩm</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-4">
-            <Label>Hình ảnh sản phẩm</Label>
-            <div className="flex flex-wrap gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {imagePreviewUrls.map((url, index) => (
                 <div 
-                  key={index} 
-                  className="relative h-24 w-24 rounded-md border border-gray-200"
+                  key={index}
+                  className="relative aspect-square border rounded-md overflow-hidden group"
                 >
                   <img 
                     src={url} 
-                    alt={`Product ${index}`} 
-                    className="h-full w-full object-cover rounded-md"
+                    alt={`Product preview ${index + 1}`}
+                    className="w-full h-full object-cover"
                   />
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
-                    className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white"
+                    className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <X className="h-4 w-4 text-white" />
                   </button>
                 </div>
               ))}
-              <label 
-                htmlFor="image-upload"
-                className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-gray-300 hover:bg-gray-50"
+
+              <button
+                type="button"
+                onClick={triggerFileInput}
+                className="flex flex-col items-center justify-center aspect-square border border-dashed rounded-md hover:bg-muted/50 transition-colors"
               >
-                <Upload className="h-6 w-6 text-gray-400" />
-                <span className="mt-1 text-xs text-gray-500">Thêm ảnh</span>
-              </label>
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="hidden"
-              />
+                <Plus className="h-8 w-8 mb-1 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Thêm ảnh</span>
+              </button>
+            </div>
+
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              accept="image/*"
+              multiple
+              className="hidden"
+            />
+
+            {uploadError && (
+              <p className="text-red-500 text-sm mt-2">{uploadError}</p>
+            )}
+
+            <div className="flex justify-center">
+              <Button type="button" variant="outline" onClick={triggerFileInput}>
+                <Upload className="h-4 w-4 mr-2" />
+                Tải ảnh lên
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Trạng thái</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trạng thái sản phẩm</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="publish">Đã đăng (Publish)</SelectItem>
+                    <SelectItem value="draft">Bản nháp (Draft)</SelectItem>
+                    <SelectItem value="pending">Chờ duyệt (Pending)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="featured"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Sản phẩm nổi bật</FormLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Đánh dấu sản phẩm này là sản phẩm nổi bật
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         </CardContent>
       </Card>
     </div>

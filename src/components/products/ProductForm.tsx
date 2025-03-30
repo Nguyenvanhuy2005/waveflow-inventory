@@ -39,12 +39,15 @@ const ProductForm = ({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState("general");
+  const [productType, setProductType] = useState(product?.type || "simple");
+  const [variations, setVariations] = useState<any[]>(product?.variations || []);
 
   // Initialize form with product data if editing
   const form = useForm<z.infer<typeof ProductFormSchema>>({
     resolver: zodResolver(ProductFormSchema),
     defaultValues: {
       name: product?.name || "",
+      type: product?.type || "simple",
       regular_price: product?.regular_price || "",
       sale_price: product?.sale_price || "",
       description: product?.description || "",
@@ -65,6 +68,7 @@ const ProductForm = ({
         height: product?.dimensions?.height || "",
       },
       attributes: [],
+      variations: [],
     },
   });
 
@@ -75,6 +79,7 @@ const ProductForm = ({
       
       form.reset({
         name: product.name || "",
+        type: product.type || "simple",
         regular_price: product.regular_price || "",
         sale_price: product.sale_price || "",
         description: product.description || "",
@@ -95,7 +100,15 @@ const ProductForm = ({
           height: product.dimensions?.height || "",
         },
         attributes: [],
+        variations: [],
       });
+      
+      setProductType(product.type || "simple");
+      
+      // Set variations if they exist
+      if (product.variations && Array.isArray(product.variations)) {
+        setVariations(product.variations);
+      }
     }
   }, [product, form]);
 
@@ -104,9 +117,20 @@ const ProductForm = ({
       // Prepare the data for API submission
       const preparedData = { ...data };
       
+      // Set the product type from state
+      preparedData.type = productType;
+      
       // Format categories as expected by WooCommerce API
       if (preparedData.categories && preparedData.categories.length > 0) {
         preparedData.categories = preparedData.categories.map((id: number) => ({ id }));
+      }
+      
+      // Add attributes
+      preparedData.attributes = selectedAttributes;
+      
+      // Add variations if product is variable
+      if (productType === "variable" && variations.length > 0) {
+        preparedData.variations = variations;
       }
       
       console.log("Sending to API:", preparedData);
@@ -146,11 +170,15 @@ const ProductForm = ({
   const onSubmit = (values: z.infer<typeof ProductFormSchema>) => {
     console.log("Form values:", values);
     console.log("Selected attributes:", selectedAttributes);
+    console.log("Product type:", productType);
+    console.log("Variations:", variations);
     
     // Prepare the data for submission
     const formData = {
       ...values,
+      type: productType,
       attributes: selectedAttributes,
+      variations: productType === "variable" ? variations : [],
     };
     
     console.log("Submitting data:", formData);
@@ -162,12 +190,18 @@ const ProductForm = ({
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <ProductTabs 
           form={form}
+          product={product}
+          productId={productId}
           selectedTab={selectedTab} 
           setSelectedTab={setSelectedTab}
           selectedImages={selectedImages}
           imagePreviewUrls={imagePreviewUrls}
           selectedAttributes={selectedAttributes}
           setSelectedAttributes={setSelectedAttributes}
+          productType={productType}
+          setProductType={setProductType}
+          variations={variations}
+          setVariations={setVariations}
           setSelectedImages={setSelectedImages}
           setImagePreviewUrls={setImagePreviewUrls}
         />

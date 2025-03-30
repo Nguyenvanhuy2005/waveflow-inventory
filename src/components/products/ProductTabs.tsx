@@ -5,27 +5,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GeneralTab from "./tabs/GeneralTab";
 import InventoryTab from "./tabs/InventoryTab";
 import AttributesTab from "./tabs/AttributesTab";
+import VariationsTab from "./tabs/VariationsTab";
 
 interface ProductTabsProps {
   form: any;
+  product: any;
+  productId: number | null;
   selectedTab: string;
   setSelectedTab: (tab: string) => void;
   selectedImages: File[];
   imagePreviewUrls: string[];
   selectedAttributes: any[];
   setSelectedAttributes: (attributes: any[]) => void;
+  productType: string;
+  setProductType: (type: string) => void;
+  variations: any[];
+  setVariations: (variations: any[]) => void;
   setSelectedImages: (files: File[]) => void;
   setImagePreviewUrls: (urls: string[]) => void;
 }
 
 const ProductTabs = ({
   form,
+  product,
+  productId,
   selectedTab,
   setSelectedTab,
   selectedImages,
   imagePreviewUrls,
   selectedAttributes,
   setSelectedAttributes,
+  productType,
+  setProductType,
+  variations,
+  setVariations,
   setSelectedImages,
   setImagePreviewUrls
 }: ProductTabsProps) => {
@@ -69,10 +82,11 @@ const ProductTabs = ({
 
   return (
     <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-      <TabsList className="grid grid-cols-3 md:w-[600px]">
+      <TabsList className="grid grid-cols-4 md:w-[800px]">
         <TabsTrigger value="general">Thông tin cơ bản</TabsTrigger>
         <TabsTrigger value="inventory">Kho hàng</TabsTrigger>
         <TabsTrigger value="attributes">Thuộc tính</TabsTrigger>
+        <TabsTrigger value="variations">Biến thể</TabsTrigger>
       </TabsList>
       
       <TabsContent value="general">
@@ -82,6 +96,8 @@ const ProductTabs = ({
           imagePreviewUrls={imagePreviewUrls}
           setImagePreviewUrls={setImagePreviewUrls}
           setSelectedImages={setSelectedImages}
+          productType={productType}
+          setProductType={setProductType}
         />
       </TabsContent>
       
@@ -96,6 +112,18 @@ const ProductTabs = ({
           setSelectedAttributes={setSelectedAttributes}
           attributeTerms={attributeTerms}
           isLoadingTerms={loadingTerms}
+        />
+      </TabsContent>
+
+      <TabsContent value="variations">
+        <VariationsTab
+          form={form}
+          product={product}
+          productType={productType}
+          selectedAttributes={selectedAttributes}
+          variations={variations}
+          setVariations={setVariations}
+          isLoadingVariations={false}
         />
       </TabsContent>
     </Tabs>

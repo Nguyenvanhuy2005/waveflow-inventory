@@ -3,6 +3,7 @@ import * as z from "zod";
 
 export const ProductFormSchema = z.object({
   name: z.string().min(1, "Tên sản phẩm không được để trống"),
+  type: z.string().default("simple"),
   regular_price: z.string().optional(),
   sale_price: z.string().optional(),
   description: z.string().optional(),
@@ -23,4 +24,5 @@ export const ProductFormSchema = z.object({
     height: z.string().optional(),
   }).optional(),
   attributes: z.array(z.any()).optional(),
+  variations: z.array(z.any()).optional(),
 });
