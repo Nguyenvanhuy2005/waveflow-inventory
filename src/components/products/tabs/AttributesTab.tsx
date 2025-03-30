@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface AttributesTabProps {
@@ -23,16 +23,20 @@ const AttributesTab = ({
   attributeTerms,
   setSelectedAttributes
 }: AttributesTabProps) => {
-  // Hàm xử lý thêm thuộc tính mới
+  // State for search term input
+  const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
+  const [newOptionValues, setNewOptionValues] = useState<Record<number, string>>({});
+  
+  // Function to add new attribute
   const addAttribute = (attributeId: number, attributeName: string) => {
-    // Kiểm tra xem thuộc tính đã tồn tại chưa
+    // Check if attribute already exists
     const exists = selectedAttributes.some(attr => attr.id === attributeId);
     if (exists) {
       toast.error("Thuộc tính này đã được thêm");
       return;
     }
 
-    // Thêm thuộc tính mới
+    // Add new attribute
     const newAttribute = {
       id: attributeId,
       name: attributeName,
@@ -42,14 +46,27 @@ const AttributesTab = ({
       options: [] as string[],
     };
     setSelectedAttributes([...selectedAttributes, newAttribute]);
+    
+    // Initialize search term for this attribute
+    setSearchTerms({...searchTerms, [attributeId]: ''});
+    setNewOptionValues({...newOptionValues, [attributeId]: ''});
   };
 
-  // Hàm xử lý xóa thuộc tính
+  // Function to remove attribute
   const removeAttribute = (attributeId: number) => {
     setSelectedAttributes(selectedAttributes.filter(attr => attr.id !== attributeId));
+    
+    // Clean up search term for this attribute
+    const newSearchTerms = {...searchTerms};
+    delete newSearchTerms[attributeId];
+    setSearchTerms(newSearchTerms);
+    
+    const newOptionValuesCopy = {...newOptionValues};
+    delete newOptionValuesCopy[attributeId];
+    setNewOptionValues(newOptionValuesCopy);
   };
 
-  // Cập nhật giá trị thuộc tính
+  // Function to update attribute options
   const updateAttributeOptions = (attributeId: number, options: string[]) => {
     setSelectedAttributes(
       selectedAttributes.map(attr => 
@@ -58,13 +75,16 @@ const AttributesTab = ({
     );
   };
 
-  // Thêm giá trị thuộc tính
+  // Function to add attribute option
   const addAttributeOption = (attributeId: number, option: string) => {
+    if (!option.trim()) return;
+    
     setSelectedAttributes(
       selectedAttributes.map(attr => {
         if (attr.id === attributeId) {
-          // Kiểm tra xem option đã tồn tại chưa
+          // Check if option already exists
           if (attr.options.includes(option)) {
+            toast.error(`Giá trị "${option}" đã tồn tại trong thuộc tính này`);
             return attr;
           }
           return { ...attr, options: [...attr.options, option] };
@@ -72,9 +92,12 @@ const AttributesTab = ({
         return attr;
       })
     );
+    
+    // Reset option input
+    setNewOptionValues({...newOptionValues, [attributeId]: ''});
   };
 
-  // Xóa giá trị thuộc tính
+  // Function to remove attribute option
   const removeAttributeOption = (attributeId: number, option: string) => {
     setSelectedAttributes(
       selectedAttributes.map(attr => {
@@ -86,7 +109,7 @@ const AttributesTab = ({
     );
   };
 
-  // Cập nhật cài đặt thuộc tính
+  // Function to update attribute setting
   const updateAttributeSetting = (attributeId: number, key: string, value: boolean) => {
     setSelectedAttributes(
       selectedAttributes.map(attr => {
@@ -96,6 +119,28 @@ const AttributesTab = ({
         return attr;
       })
     );
+  };
+
+  // Filter attribute terms based on search
+  const getFilteredTerms = (attributeId: number) => {
+    if (!attributeTerms || !attributeTerms[attributeId]) return [];
+    
+    const searchTerm = searchTerms[attributeId]?.toLowerCase() || '';
+    if (!searchTerm) return attributeTerms[attributeId];
+    
+    return attributeTerms[attributeId].filter(term => 
+      term.name.toLowerCase().includes(searchTerm)
+    );
+  };
+  
+  // Handle search input change
+  const handleSearchChange = (attributeId: number, value: string) => {
+    setSearchTerms({...searchTerms, [attributeId]: value});
+  };
+  
+  // Handle new option input change
+  const handleNewOptionChange = (attributeId: number, value: string) => {
+    setNewOptionValues({...newOptionValues, [attributeId]: value});
   };
 
   return (
@@ -170,7 +215,7 @@ const AttributesTab = ({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Giá trị thuộc tính</Label>
+                  <Label>Giá trị thuộc tính đã chọn</Label>
                   <div className="flex flex-wrap gap-2">
                     {attr.options.map((option: string) => (
                       <Badge 
@@ -189,56 +234,82 @@ const AttributesTab = ({
                         </Button>
                       </Badge>
                     ))}
+                    
+                    {attr.options.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Chưa có giá trị nào được chọn</p>
+                    )}
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <Select
-                    onValueChange={(value) => addAttributeOption(attr.id, value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Chọn giá trị" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {attributeTerms && attributeTerms[attr.id]?.map((term: any) => (
-                        <SelectItem 
-                          key={term.id} 
-                          value={term.name}
-                          disabled={attr.options.includes(term.name)}
-                        >
-                          {term.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Search existing attribute values */}
+                <div className="space-y-3">
+                  <Label>Tìm và thêm giá trị có sẵn</Label>
+                  <div className="flex items-center space-x-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm giá trị thuộc tính"
+                        className="pl-8"
+                        value={searchTerms[attr.id] || ''}
+                        onChange={(e) => handleSearchChange(attr.id, e.target.value)}
+                      />
+                    </div>
+                  </div>
                   
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+                    {getFilteredTerms(attr.id)?.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {getFilteredTerms(attr.id).map(term => (
+                          <div key={term.id} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`term-${attr.id}-${term.id}`}
+                              checked={attr.options.includes(term.name)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  addAttributeOption(attr.id, term.name);
+                                } else {
+                                  removeAttributeOption(attr.id, term.name);
+                                }
+                              }}
+                            />
+                            <label 
+                              htmlFor={`term-${attr.id}-${term.id}`}
+                              className="text-sm"
+                            >
+                              {term.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-center text-muted-foreground py-2">
+                        {searchTerms[attr.id] ? 'Không tìm thấy giá trị phù hợp' : 'Danh sách giá trị trống'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Add custom attribute value */}
+                <div className="space-y-2">
+                  <Label>Thêm giá trị mới</Label>
                   <div className="flex items-center gap-2">
                     <Input
-                      placeholder="Hoặc nhập giá trị mới"
-                      className="w-64"
+                      placeholder="Nhập giá trị thuộc tính mới"
+                      className="flex-1"
+                      value={newOptionValues[attr.id] || ''}
+                      onChange={(e) => handleNewOptionChange(attr.id, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          const value = (e.target as HTMLInputElement).value.trim();
-                          if (value) {
-                            addAttributeOption(attr.id, value);
-                            (e.target as HTMLInputElement).value = '';
-                          }
+                          addAttributeOption(attr.id, newOptionValues[attr.id] || '');
                         }
                       }}
                     />
                     <Button
                       type="button"
-                      size="sm"
-                      onClick={(e) => {
-                        const input = (e.currentTarget.previousSibling as HTMLInputElement);
-                        const value = input.value.trim();
-                        if (value) {
-                          addAttributeOption(attr.id, value);
-                          input.value = '';
-                        }
-                      }}
+                      onClick={() => addAttributeOption(attr.id, newOptionValues[attr.id] || '')}
                     >
+                      <Plus className="h-4 w-4 mr-1" />
                       Thêm
                     </Button>
                   </div>

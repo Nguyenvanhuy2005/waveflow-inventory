@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
@@ -18,25 +19,37 @@ interface GeneralTabProps {
 }
 
 const GeneralTab = ({ form, categories, imagePreviewUrls, setImagePreviewUrls, setSelectedImages }: GeneralTabProps) => {
+  // State to manage files temporarily
+  const [files, setFiles] = useState<File[]>([]);
+  
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      const newFiles = [...filesArray];
-      setSelectedImages(newFiles);
       
-      // Tạo URL để xem trước hình ảnh
+      // Update file state
+      setFiles(filesArray);
+      setSelectedImages(filesArray);
+      
+      // Create image preview URLs
       const newImageUrls = filesArray.map(file => URL.createObjectURL(file));
-      setImagePreviewUrls([...newImageUrls]);
+      setImagePreviewUrls(newImageUrls);
+      
+      // Reset the file input
+      e.target.value = '';
     }
   };
 
   const removeImage = (index: number) => {
-    const newSelectedImages = imagePreviewUrls.filter((_, i) => i !== index);
-    setSelectedImages([]);
-    
-    // Revoke URL để tránh rò rỉ bộ nhớ
+    // Revoke URL to prevent memory leaks
     URL.revokeObjectURL(imagePreviewUrls[index]);
+    
+    // Create new arrays without the removed item
     const newImagePreviewUrls = imagePreviewUrls.filter((_, i) => i !== index);
+    const newFiles = files.filter((_, i) => i !== index);
+    
+    // Update state
+    setFiles(newFiles);
+    setSelectedImages(newFiles);
     setImagePreviewUrls(newImagePreviewUrls);
   };
 
@@ -211,7 +224,7 @@ const GeneralTab = ({ form, categories, imagePreviewUrls, setImagePreviewUrls, s
                         form.setValue("categories", [...currentCategories, category.id]);
                       } else {
                         form.setValue("categories", 
-                          currentCategories.filter(id => id !== category.id)
+                          currentCategories.filter((id: number) => id !== category.id)
                         );
                       }
                     }}

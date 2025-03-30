@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import ProductForm from "@/components/products/ProductForm";
+import { toast } from "sonner";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,24 +19,35 @@ const ProductDetail = () => {
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [selectedAttributes, setSelectedAttributes] = useState<any[]>([]);
 
-  const { data: product, isPending } = useQuery({
+  // Load product data
+  const { data: product, isPending, error } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => (productId ? getProduct(productId) : Promise.resolve(null)),
     enabled: !isNewProduct && !!productId,
   });
 
-  // Cập nhật dữ liệu khi có sản phẩm
+  // Handle API error
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching product data:", error);
+      toast.error("Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.");
+    }
+  }, [error]);
+
+  // Update data when product is loaded
   useEffect(() => {
     if (product) {
-      // Cập nhật danh sách thuộc tính sản phẩm
+      // Update product attributes if available
       if (product.attributes && product.attributes.length > 0) {
         setSelectedAttributes(product.attributes);
       }
 
-      // Cập nhật danh sách hình ảnh nếu có
+      // Update image preview URLs if available
       if (product.images && product.images.length > 0) {
         setImagePreviewUrls(product.images.map(img => img.src));
       }
+      
+      console.log("Loaded product data:", product);
     }
   }, [product]);
 
@@ -58,7 +70,7 @@ const ProductDetail = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-3xl font-bold">
-            {isNewProduct ? "Thêm sản phẩm mới" : product?.name}
+            {isNewProduct ? "Thêm sản phẩm mới" : product?.name || "Đang tải..."}
           </h1>
           {!isNewProduct && product?.status && (
             <StatusBadge status={product.status} type="product" />
