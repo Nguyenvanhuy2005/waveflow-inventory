@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Plus, Search, Trash2 } from "lucide-react";
+import { X, Plus, Search, Trash2, AlertCircle, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface AttributesTabProps {
@@ -15,13 +15,15 @@ interface AttributesTabProps {
   selectedAttributes: any[];
   attributeTerms?: Record<number, any[]>;
   setSelectedAttributes: (attributes: any[]) => void;
+  isLoadingTerms?: boolean;
 }
 
 const AttributesTab = ({ 
   attributes, 
   selectedAttributes, 
   attributeTerms,
-  setSelectedAttributes
+  setSelectedAttributes,
+  isLoadingTerms = false
 }: AttributesTabProps) => {
   // Initialize state variables first
   const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
@@ -29,13 +31,13 @@ const AttributesTab = ({
   
   // Now the useEffect can safely access both variables
   useEffect(() => {
-    if (selectedAttributes && attributeTerms) {
+    if (selectedAttributes) {
       // Initialize search terms and option values for all attributes
       const updatedSearchTerms = { ...searchTerms };
       const updatedOptionValues = { ...newOptionValues };
       
       selectedAttributes.forEach(attr => {
-        if (!updatedSearchTerms[attr.id] && attr.id !== 0) {
+        if (!updatedSearchTerms[attr.id]) {
           updatedSearchTerms[attr.id] = '';
         }
         if (!updatedOptionValues[attr.id]) {
@@ -46,7 +48,7 @@ const AttributesTab = ({
       setSearchTerms(updatedSearchTerms);
       setNewOptionValues(updatedOptionValues);
     }
-  }, [selectedAttributes, attributeTerms]);
+  }, [selectedAttributes]);
   
   // Function to add new attribute
   const addAttribute = (attributeId: number, attributeName: string) => {
@@ -131,6 +133,28 @@ const AttributesTab = ({
     setNewOptionValues({...newOptionValues, [attributeId]: ''});
   };
 
+  // Function to add multiple attribute options
+  const addMultipleOptions = (attributeId: number, options: string[]) => {
+    if (!options || options.length === 0) return;
+    
+    setSelectedAttributes(
+      selectedAttributes.map(attr => {
+        if (attr.id === attributeId) {
+          // Filter out options that already exist
+          const uniqueNewOptions = options.filter(option => !attr.options.includes(option));
+          
+          if (uniqueNewOptions.length === 0) {
+            // No new options to add
+            return attr;
+          }
+          
+          return { ...attr, options: [...attr.options, ...uniqueNewOptions] };
+        }
+        return attr;
+      })
+    );
+  };
+
   // Function to remove attribute option
   const removeAttributeOption = (attributeId: number, option: string) => {
     setSelectedAttributes(
@@ -178,32 +202,21 @@ const AttributesTab = ({
   };
 
   // Add selected terms from the filtered list
-  const addSelectedTerms = (attributeId: number, selectedTermIds: string[]) => {
-    if (!attributeTerms || !attributeTerms[attributeId] || selectedTermIds.length === 0) return;
+  const addSelectedTerms = (attributeId: number, selectedTerms: any[]) => {
+    if (!selectedTerms || selectedTerms.length === 0) return;
     
-    const newOptions = selectedTermIds.map(termId => {
-      const term = attributeTerms[attributeId].find(t => t.id.toString() === termId);
-      return term ? term.name : '';
-    }).filter(name => name !== '');
+    const optionsToAdd = selectedTerms.map(term => term.name);
+    addMultipleOptions(attributeId, optionsToAdd);
+    toast.success(`Đã thêm ${optionsToAdd.length} giá trị thuộc tính`);
+  };
+  
+  // Function to select all terms for an attribute
+  const selectAllTerms = (attributeId: number) => {
+    if (!attributeTerms || !attributeTerms[attributeId]) return;
     
-    if (newOptions.length === 0) return;
-    
-    setSelectedAttributes(
-      selectedAttributes.map(attr => {
-        if (attr.id === attributeId) {
-          // Filter out options that already exist
-          const uniqueNewOptions = newOptions.filter(option => !attr.options.includes(option));
-          if (uniqueNewOptions.length === 0) {
-            toast.info("Các giá trị đã được thêm trước đó");
-            return attr;
-          }
-          return { ...attr, options: [...attr.options, ...uniqueNewOptions] };
-        }
-        return attr;
-      })
-    );
-    
-    toast.success(`Đã thêm ${newOptions.length} giá trị`);
+    const allTermNames = attributeTerms[attributeId].map(term => term.name);
+    addMultipleOptions(attributeId, allTermNames);
+    toast.success(`Đã thêm tất cả ${allTermNames.length} giá trị thuộc tính`);
   };
 
   return (
@@ -319,7 +332,26 @@ const AttributesTab = ({
                 
                 {/* Search existing attribute values */}
                 <div className="space-y-3">
-                  <Label>Tìm và thêm giá trị có sẵn</Label>
+                  <div className="flex justify-between items-center">
+                    <Label>Tìm và thêm giá trị có sẵn</Label>
+                    
+                    {isLoadingTerms ? (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <LoaderCircle className="h-3 w-3 mr-1 animate-spin" />
+                        Đang tải...
+                      </div>
+                    ) : attributeTerms && attributeTerms[attr.id]?.length > 0 ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => selectAllTerms(attr.id)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Thêm tất cả
+                      </Button>
+                    ) : null}
+                  </div>
+                  
                   <div className="flex items-center space-x-2">
                     <div className="relative flex-1">
                       <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -332,36 +364,52 @@ const AttributesTab = ({
                     </div>
                   </div>
                   
-                  {attributeTerms && attributeTerms[attr.id] ? (
+                  {isLoadingTerms ? (
+                    <div className="flex justify-center items-center py-4">
+                      <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+                      <span className="text-sm">Đang tải giá trị thuộc tính...</span>
+                    </div>
+                  ) : attributeTerms && attr.id > 0 ? (
                     <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-                      {getFilteredTerms(attr.id)?.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          {getFilteredTerms(attr.id).map(term => (
-                            <div key={term.id} className="flex items-center space-x-2">
-                              <Checkbox 
-                                id={`term-${attr.id}-${term.id}`}
-                                checked={attr.options.includes(term.name)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    addAttributeOption(attr.id, term.name);
-                                  } else {
-                                    removeAttributeOption(attr.id, term.name);
-                                  }
-                                }}
-                              />
-                              <label 
-                                htmlFor={`term-${attr.id}-${term.id}`}
-                                className="text-sm"
-                              >
-                                {term.name}
-                              </label>
+                      {attributeTerms[attr.id] && attributeTerms[attr.id].length > 0 ? (
+                        <>
+                          {getFilteredTerms(attr.id).length > 0 ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              {getFilteredTerms(attr.id).map(term => (
+                                <div key={term.id} className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id={`term-${attr.id}-${term.id}`}
+                                    checked={attr.options.includes(term.name)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        addAttributeOption(attr.id, term.name);
+                                      } else {
+                                        removeAttributeOption(attr.id, term.name);
+                                      }
+                                    }}
+                                  />
+                                  <label 
+                                    htmlFor={`term-${attr.id}-${term.id}`}
+                                    className="text-sm"
+                                  >
+                                    {term.name}
+                                  </label>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          ) : (
+                            <p className="text-sm text-center text-muted-foreground py-2">
+                              Không tìm thấy giá trị phù hợp với "{searchTerms[attr.id]}"
+                            </p>
+                          )}
+                        </>
                       ) : (
-                        <p className="text-sm text-center text-muted-foreground py-2">
-                          {searchTerms[attr.id] ? 'Không tìm thấy giá trị phù hợp' : 'Danh sách giá trị trống'}
-                        </p>
+                        <div className="flex flex-col items-center justify-center py-3 gap-2">
+                          <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                          <p className="text-sm text-center text-muted-foreground">
+                            Thuộc tính này chưa có giá trị được định nghĩa
+                          </p>
+                        </div>
                       )}
                     </div>
                   ) : attr.id === 0 ? (
@@ -370,9 +418,9 @@ const AttributesTab = ({
                       Thuộc tính tùy chỉnh không có giá trị có sẵn
                     </div>
                   ) : (
-                    <div className="flex justify-center py-2">
-                      <div className="loading-spinner" />
-                      <span className="ml-2 text-sm">Đang tải giá trị...</span>
+                    <div className="flex justify-center items-center py-4">
+                      <AlertCircle className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Không thể tải giá trị thuộc tính</span>
                     </div>
                   )}
                 </div>
@@ -413,4 +461,3 @@ const AttributesTab = ({
 };
 
 export default AttributesTab;
-

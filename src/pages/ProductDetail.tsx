@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getProduct } from "@/services/productService";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -41,16 +40,32 @@ const ProductDetail = () => {
       // Update product attributes if available
       if (product.attributes && product.attributes.length > 0) {
         console.log("Loading product attributes:", product.attributes);
-        setSelectedAttributes(product.attributes.map(attr => ({
-          ...attr,
-          // Ensure options is always an array
-          options: Array.isArray(attr.options) ? attr.options : []
-        })));
+        
+        // Process attributes to ensure they have all required properties
+        const processedAttributes = product.attributes.map(attr => ({
+          id: attr.id,
+          name: attr.name,
+          position: attr.position || 0,
+          visible: attr.visible !== undefined ? attr.visible : true,
+          variation: attr.variation !== undefined ? attr.variation : false,
+          // Ensure options is always an array of strings
+          options: Array.isArray(attr.options) 
+            ? attr.options.map(opt => typeof opt === 'string' ? opt : String(opt))
+            : []
+        }));
+        
+        setSelectedAttributes(processedAttributes);
+        console.log("Processed attributes:", processedAttributes);
+      } else {
+        // Reset attributes if none are present
+        setSelectedAttributes([]);
       }
 
       // Update image preview URLs if available
       if (product.images && product.images.length > 0) {
         setImagePreviewUrls(product.images.map(img => img.src));
+      } else {
+        setImagePreviewUrls([]);
       }
       
       console.log("Loaded product data:", product);

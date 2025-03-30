@@ -215,7 +215,9 @@ export const uploadMultipleProductImages = async (productId: number, images: Fil
 
 export const getProductAttributes = async () => {
   try {
-    const response = await wcApiClient.get<ProductAttribute[]>("/products/attributes");
+    const response = await wcApiClient.get<ProductAttribute[]>("/products/attributes", {
+      params: { per_page: 100 } // Fetch up to 100 attributes 
+    });
     return response.data;
   } catch (error) {
     console.error("Error fetching product attributes:", error);
@@ -225,7 +227,10 @@ export const getProductAttributes = async () => {
 
 export const getProductAttributeTerms = async (attributeId: number) => {
   try {
-    const response = await wcApiClient.get<ProductAttributeTerm[]>(`/products/attributes/${attributeId}/terms`);
+    const response = await wcApiClient.get<ProductAttributeTerm[]>(`/products/attributes/${attributeId}/terms`, {
+      params: { per_page: 100 } // Fetch up to 100 terms per attribute
+    });
+    console.log(`Fetched ${response.data.length} terms for attribute ${attributeId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching terms for attribute ${attributeId}:`, error);

@@ -39,17 +39,24 @@ const ProductTabs = ({
     queryFn: () => getProductAttributes(),
   });
 
-  // Lấy danh sách các giá trị của thuộc tính, chỉ cho thuộc tính có id > 0
+  // Fetch all attribute terms for all attributes upfront
   const { data: attributeTerms, isLoading: loadingTerms } = useQuery({
-    queryKey: ["attribute-terms", selectedAttributes.map(attr => attr.id).filter(id => id > 0)],
+    queryKey: ["all-attribute-terms", attributes?.map(attr => attr.id)],
     queryFn: async () => {
       const results: Record<number, any[]> = {};
-      const attributesToFetch = selectedAttributes.filter(attr => attr.id > 0);
       
-      for (const attr of attributesToFetch) {
+      if (!attributes || attributes.length === 0) {
+        return results;
+      }
+
+      // Fetch terms for all available attributes, not just selected ones
+      for (const attr of attributes) {
         try {
-          const terms = await getProductAttributeTerms(attr.id);
-          results[attr.id] = terms;
+          // Skip custom attributes with id = 0
+          if (attr.id > 0) {
+            const terms = await getProductAttributeTerms(attr.id);
+            results[attr.id] = terms;
+          }
         } catch (error) {
           console.error(`Error fetching terms for attribute ${attr.id}:`, error);
           results[attr.id] = [];
@@ -57,7 +64,7 @@ const ProductTabs = ({
       }
       return results;
     },
-    enabled: selectedAttributes.some(attr => attr.id > 0),
+    enabled: !!attributes && attributes.length > 0,
   });
 
   return (
@@ -88,6 +95,7 @@ const ProductTabs = ({
           selectedAttributes={selectedAttributes}
           setSelectedAttributes={setSelectedAttributes}
           attributeTerms={attributeTerms}
+          isLoadingTerms={loadingTerms}
         />
       </TabsContent>
     </Tabs>
