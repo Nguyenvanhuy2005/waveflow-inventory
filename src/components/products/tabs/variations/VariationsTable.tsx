@@ -66,11 +66,15 @@ const VariationsTable = ({
             variations.map((variation, index) => (
               <TableRow key={index}>
                 <TableCell className="font-medium">
-                  {variation.attributes.map(attr => (
-                    <div key={attr.name} className="mb-1">
-                      <span className="font-medium">{attr.name}:</span> {attr.option}
-                    </div>
-                  ))}
+                  {variation.attributes && variation.attributes.length > 0 ? (
+                    variation.attributes.map(attr => (
+                      <div key={attr.name} className="mb-1">
+                        <span className="font-medium">{attr.name}:</span> {attr.option}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-muted-foreground italic">Không có thuộc tính</div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Input 
