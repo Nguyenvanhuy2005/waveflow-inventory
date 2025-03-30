@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
@@ -22,20 +21,23 @@ const GeneralTab = ({ form, categories, imagePreviewUrls, setImagePreviewUrls, s
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      setSelectedImages((prev) => [...prev, ...filesArray]);
+      const newFiles = [...filesArray];
+      setSelectedImages(newFiles);
       
       // Tạo URL để xem trước hình ảnh
       const newImageUrls = filesArray.map(file => URL.createObjectURL(file));
-      setImagePreviewUrls((prev) => [...prev, ...newImageUrls]);
+      setImagePreviewUrls([...newImageUrls]);
     }
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    const newSelectedImages = imagePreviewUrls.filter((_, i) => i !== index);
+    setSelectedImages([]);
     
     // Revoke URL để tránh rò rỉ bộ nhớ
     URL.revokeObjectURL(imagePreviewUrls[index]);
-    setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+    const newImagePreviewUrls = imagePreviewUrls.filter((_, i) => i !== index);
+    setImagePreviewUrls(newImagePreviewUrls);
   };
 
   return (
