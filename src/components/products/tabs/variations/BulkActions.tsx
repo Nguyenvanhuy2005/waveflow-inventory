@@ -45,6 +45,7 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
     }
 
     onApplyBulkAction(bulkAction, bulkPrice, bulkSalePrice, bulkStockStatus, bulkStockQuantity);
+    toast.success("Đã áp dụng thao tác hàng loạt thành công");
     setBulkAction("");
     setBulkPrice("");
     setBulkSalePrice("");
@@ -64,7 +65,7 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
               <SelectContent>
                 <SelectItem value="set_regular_price">Đặt giá gốc</SelectItem>
                 <SelectItem value="set_sale_price">Đặt giá khuyến mãi</SelectItem>
-                <SelectItem value="set_sku">Đặt SKU (SC+id)</SelectItem>
+                <SelectItem value="set_sku">Đặt SKU (SC+ID)</SelectItem>
                 <SelectItem value="set_stock_status">Đặt trạng thái tồn kho</SelectItem>
                 <SelectItem value="set_stock_quantity">Đặt số lượng tồn kho</SelectItem>
               </SelectContent>

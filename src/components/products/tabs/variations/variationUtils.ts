@@ -90,15 +90,17 @@ export const createVariationsFromCombinations = (
   // Map existing variations by their attribute combination signature
   const existingVariationMap = new Map<string, Variation>();
   
-  existingVariations.forEach(variation => {
-    if (variation.attributes && Array.isArray(variation.attributes)) {
-      const signature = variation.attributes
-        .map(attr => `${attr.name}:${attr.option}`)
-        .sort()
-        .join('|');
-      existingVariationMap.set(signature, variation);
-    }
-  });
+  if (Array.isArray(existingVariations)) {
+    existingVariations.forEach(variation => {
+      if (variation && typeof variation === 'object' && variation.attributes && Array.isArray(variation.attributes)) {
+        const signature = variation.attributes
+          .map(attr => `${attr.name}:${attr.option}`)
+          .sort()
+          .join('|');
+        existingVariationMap.set(signature, variation);
+      }
+    });
+  }
 
   // Create new variations array with all required combinations
   return combinations.map(combination => {
@@ -137,6 +139,11 @@ export const applyBulkActionToVariations = (
   stockStatus: string,
   stockQuantity: string
 ): Variation[] => {
+  if (!Array.isArray(variations)) {
+    console.error("Invalid variations data:", variations);
+    return [];
+  }
+
   const updatedVariations = [...variations];
 
   switch (action) {
@@ -200,11 +207,21 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
     }
     
     // Create a new object with all the properties of the original variation
-    const formattedVariation = { ...variation };
+    const formattedVariation: Record<string, any> = {};
+    
+    // Add basic properties
+    if (variation.id) formattedVariation.id = variation.id;
+    formattedVariation.regular_price = variation.regular_price || '';
+    formattedVariation.sale_price = variation.sale_price || '';
+    formattedVariation.sku = variation.sku || '';
+    
+    if (variation.stock_status) formattedVariation.stock_status = variation.stock_status;
+    if (variation.stock_quantity !== undefined) formattedVariation.stock_quantity = variation.stock_quantity;
+    if (variation.manage_stock !== undefined) formattedVariation.manage_stock = variation.manage_stock;
     
     // Format attributes correctly for WooCommerce API
-    if (formattedVariation.attributes && Array.isArray(formattedVariation.attributes)) {
-      formattedVariation.attributes = formattedVariation.attributes.map(attr => ({
+    if (variation.attributes && Array.isArray(variation.attributes)) {
+      formattedVariation.attributes = variation.attributes.map(attr => ({
         name: attr.name,
         option: attr.option
       }));
@@ -213,5 +230,54 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
     }
     
     return formattedVariation;
+  }).filter(variation => Object.keys(variation).length > 0); // Filter out empty variations
+};
+
+/**
+ * Find matching variation IDs from existing product data
+ */
+export const findMatchingVariationIds = (
+  combinations: AttributeOption[][],
+  existingVariations: any[]
+): number[] => {
+  if (!Array.isArray(existingVariations) || existingVariations.length === 0) {
+    return [];
+  }
+  
+  // Create signatures for all combinations
+  const combinationSignatures = combinations.map(combination => 
+    combination
+      .map(attr => `${attr.name}:${attr.option}`)
+      .sort()
+      .join('|')
+  );
+  
+  // Find matching variations from existing data
+  const matchingVariationIds: number[] = [];
+  
+  existingVariations.forEach(variation => {
+    if (variation && typeof variation === 'object' && 
+        variation.attributes && Array.isArray(variation.attributes) &&
+        variation.id) {
+      
+      const variationSignature = variation.attributes
+        .map((attr: any) => `${attr.name}:${attr.option}`)
+        .sort()
+        .join('|');
+      
+      if (combinationSignatures.includes(variationSignature)) {
+        matchingVariationIds.push(variation.id);
+      }
+    }
   });
+  
+  return matchingVariationIds;
+};
+
+/**
+ * Generate a unique SKU for each variation based on product SKU and variation ID
+ */
+export const generateVariationSku = (baseSku: string, variationId: number | undefined): string => {
+  if (!variationId) return baseSku ? `${baseSku}-variant` : '';
+  return baseSku ? `${baseSku}-${variationId}` : `SC${variationId}`;
 };

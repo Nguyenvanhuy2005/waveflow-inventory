@@ -8,7 +8,12 @@ import NoVariationsState from "./NoVariationsState";
 import BulkActions from "./BulkActions";
 import VariationsTable from "./VariationsTable";
 import ConfirmationDialogs from "./ConfirmationDialogs";
-import { generateVariationCombinations, createVariationsFromCombinations, applyBulkActionToVariations } from "./variationUtils";
+import { 
+  generateVariationCombinations, 
+  createVariationsFromCombinations, 
+  applyBulkActionToVariations,
+  findMatchingVariationIds
+} from "./variationUtils";
 
 interface Variation {
   id?: number;
@@ -83,6 +88,13 @@ const VariationsTab = ({
         manage_stock: form.getValues('manage_stock') || false
       };
 
+      // Find existing variation IDs from product if available
+      let existingVariationDetails: any[] = [];
+      if (product && product.variationsDetails && Array.isArray(product.variationsDetails)) {
+        existingVariationDetails = product.variationsDetails;
+        console.log("Existing variation details:", existingVariationDetails);
+      }
+
       // Create variations from combinations
       const newVariations = createVariationsFromCombinations(
         combinations,
@@ -91,11 +103,11 @@ const VariationsTab = ({
       );
 
       // If this is an existing product, preserve the variation IDs
-      if (product && product.variationsDetails && Array.isArray(product.variationsDetails)) {
+      if (existingVariationDetails.length > 0) {
         // Map the existing variations by their attribute signature
         const existingVariationsMap = new Map();
         
-        product.variationsDetails.forEach((variation: any) => {
+        existingVariationDetails.forEach((variation: any) => {
           if (variation && variation.attributes && Array.isArray(variation.attributes)) {
             const signature = variation.attributes
               .map((attr: any) => `${attr.name}:${attr.option}`)
@@ -116,6 +128,11 @@ const VariationsTab = ({
             const existingId = existingVariationsMap.get(signature);
             if (existingId) {
               variation.id = existingId;
+              
+              // Set SKU using the ID if it exists (SC + ID format)
+              if (!variation.sku && existingId) {
+                variation.sku = `SC${existingId}`;
+              }
             }
           }
         });
@@ -188,7 +205,7 @@ const VariationsTab = ({
         toast.success("Đã cập nhật giá khuyến mãi cho tất cả biến thể");
         break;
       case "set_sku":
-        toast.success("Đã cập nhật SKU cho tất cả biến thể theo định dạng SC+id");
+        toast.success("Đã cập nhật SKU cho tất cả biến thể theo định dạng SC+ID");
         break;
       case "set_stock_status":
         toast.success("Đã cập nhật trạng thái tồn kho cho tất cả biến thể");
