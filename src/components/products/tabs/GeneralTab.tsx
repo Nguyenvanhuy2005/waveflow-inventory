@@ -96,7 +96,9 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
     
     if (validFiles.length > 0) {
       setSelectedFiles(prev => [...prev, ...validFiles]);
-      setSelectedImages(prev => [...prev, ...validFiles]);
+      // Fix: Use concatenated array instead of updater function
+      const newFiles = [...selectedFiles, ...validFiles];
+      setSelectedImages(newFiles);
       const newUrls = [...imagePreviewUrls, ...validFileUrls];
       setImagePreviewUrls(newUrls);
       toast.success(`Đã chọn ${validFiles.length} ảnh mới`);
@@ -120,6 +122,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
       const updatedFiles = [...selectedFiles];
       updatedFiles.splice(index, 1);
       setSelectedFiles(updatedFiles);
+      // Fix: Use direct array instead of updater function
       setSelectedImages(updatedFiles);
     }
     
