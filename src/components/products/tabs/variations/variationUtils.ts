@@ -1,3 +1,4 @@
+
 interface AttributeOption {
   name: string;
   option: string;
@@ -159,3 +160,25 @@ export const applyBulkActionToVariations = (
   
   return updatedVariations;
 };
+
+/**
+ * Format variation attributes for API submission
+ * WooCommerce API expects a specific format for attributes
+ */
+export const formatVariationAttributesForApi = (variations: Variation[]): any[] => {
+  return variations.map(variation => {
+    // Create a new object with all the properties of the original variation
+    const formattedVariation = { ...variation };
+    
+    // Format attributes correctly for WooCommerce API
+    if (formattedVariation.attributes && Array.isArray(formattedVariation.attributes)) {
+      formattedVariation.attributes = formattedVariation.attributes.map(attr => ({
+        name: attr.name,
+        option: attr.option
+      }));
+    }
+    
+    return formattedVariation;
+  });
+};
+

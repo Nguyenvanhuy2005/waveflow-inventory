@@ -195,7 +195,22 @@ export const createProduct = async (productData: Partial<Product>) => {
     const response = await wcApiClient.post<Product>("/products", productData);
     
     if (productData.type === 'variable' && productData.variations && productData.variations.length > 0 && response.data.id) {
-      await createProductVariations(response.data.id, productData.variations);
+      const formattedVariations = productData.variations.map(variation => {
+        if (variation.attributes) {
+          variation.attributes = variation.attributes.map(attr => ({
+            name: attr.name,
+            option: attr.option
+          }));
+        }
+        
+        return {
+          ...variation,
+          regular_price: variation.regular_price || '',
+          sale_price: variation.sale_price || ''
+        };
+      });
+      
+      await createProductVariations(response.data.id, formattedVariations);
     }
     
     return response.data;
@@ -210,7 +225,22 @@ export const updateProduct = async (id: number, productData: Partial<Product>) =
     const response = await wcApiClient.put<Product>(`/products/${id}`, productData);
     
     if (productData.type === 'variable' && productData.variations && productData.variations.length > 0) {
-      await updateProductVariations(id, productData.variations);
+      const formattedVariations = productData.variations.map(variation => {
+        if (variation.attributes) {
+          variation.attributes = variation.attributes.map(attr => ({
+            name: attr.name,
+            option: attr.option
+          }));
+        }
+        
+        return {
+          ...variation,
+          regular_price: variation.regular_price || '',
+          sale_price: variation.sale_price || ''
+        };
+      });
+      
+      await updateProductVariations(id, formattedVariations);
     }
     
     return response.data;
@@ -380,11 +410,23 @@ export const updateProductVariation = async (productId: number, variationId: num
 
 export const updateProductVariations = async (productId: number, variations: any[]) => {
   try {
+    console.log("Updating variations with data:", variations);
+    
     const updatePromises = variations.map(variation => {
+      const apiVariationData = {
+        ...variation,
+        regular_price: variation.regular_price || '',
+        sale_price: variation.sale_price || '',
+        attributes: variation.attributes ? variation.attributes.map(attr => ({
+          name: attr.name,
+          option: attr.option
+        })) : []
+      };
+      
       if (variation.id) {
-        return wcApiClient.put(`/products/${productId}/variations/${variation.id}`, variation);
+        return wcApiClient.put(`/products/${productId}/variations/${variation.id}`, apiVariationData);
       }
-      return wcApiClient.post(`/products/${productId}/variations`, variation);
+      return wcApiClient.post(`/products/${productId}/variations`, apiVariationData);
     });
     
     const responses = await Promise.all(updatePromises);

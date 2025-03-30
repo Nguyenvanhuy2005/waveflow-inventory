@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import ProductTabs from "./ProductTabs";
 import { ProductFormSchema } from "./ProductFormSchema";
+import { formatVariationAttributesForApi } from "./tabs/variations/variationUtils";
 
 type ProductFormProps = {
   product: any;
@@ -122,8 +123,8 @@ const ProductForm = ({
       // Add attributes
       preparedData.attributes = selectedAttributes;
       
-      // Add variations
-      preparedData.variations = variations;
+      // Format and add variations for API submission
+      preparedData.variations = formatVariationAttributesForApi(variations);
       
       console.log("Sending to API:", preparedData);
       
@@ -165,12 +166,21 @@ const ProductForm = ({
     console.log("Product type:", productType);
     console.log("Variations:", variations);
     
+    // Ensure variations have proper prices
+    const validatedVariations = variations.map(variation => {
+      return {
+        ...variation,
+        regular_price: variation.regular_price || '',
+        sale_price: variation.sale_price || ''
+      };
+    });
+    
     // Prepare the data for submission
     const formData = {
       ...values,
       type: "variable", // Always set to variable
       attributes: selectedAttributes,
-      variations: variations,
+      variations: validatedVariations,
     };
     
     console.log("Submitting data:", formData);
