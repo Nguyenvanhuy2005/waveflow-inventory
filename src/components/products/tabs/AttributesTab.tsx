@@ -23,28 +23,28 @@ const AttributesTab = ({
   attributeTerms,
   setSelectedAttributes
 }: AttributesTabProps) => {
-  // State for search term input
+  // Initialize state variables first
   const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
   const [newOptionValues, setNewOptionValues] = useState<Record<number, string>>({});
   
-  // We'll use this to track which attributes need to fetch terms
+  // Now the useEffect can safely access both variables
   useEffect(() => {
     if (selectedAttributes && attributeTerms) {
       // Initialize search terms and option values for all attributes
-      const newSearchTerms = { ...searchTerms };
-      const newOptionValues = { ...newOptionValues };
+      const updatedSearchTerms = { ...searchTerms };
+      const updatedOptionValues = { ...newOptionValues };
       
       selectedAttributes.forEach(attr => {
-        if (!newSearchTerms[attr.id] && attr.id !== 0) {
-          newSearchTerms[attr.id] = '';
+        if (!updatedSearchTerms[attr.id] && attr.id !== 0) {
+          updatedSearchTerms[attr.id] = '';
         }
-        if (!newOptionValues[attr.id]) {
-          newOptionValues[attr.id] = '';
+        if (!updatedOptionValues[attr.id]) {
+          updatedOptionValues[attr.id] = '';
         }
       });
       
-      setSearchTerms(newSearchTerms);
-      setNewOptionValues(newOptionValues);
+      setSearchTerms(updatedSearchTerms);
+      setNewOptionValues(updatedOptionValues);
     }
   }, [selectedAttributes, attributeTerms]);
   
@@ -413,3 +413,4 @@ const AttributesTab = ({
 };
 
 export default AttributesTab;
+
