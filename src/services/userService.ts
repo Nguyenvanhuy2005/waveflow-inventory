@@ -43,6 +43,14 @@ export const getUsers = async (params?: UserSearchParams) => {
     // Phát hiện lỗi xác thực từ WordPress
     if (error.response?.status === 401) {
       errorMessage = "Xác thực thất bại. Vui lòng kiểm tra lại tên đăng nhập và mật khẩu của bạn.";
+      
+      // Thêm chi tiết lỗi
+      const wpError = error.response?.data?.code;
+      if (wpError === 'invalid_username') {
+        errorMessage = "Tên đăng nhập WordPress không hợp lệ hoặc không tồn tại.";
+      } else if (wpError === 'incorrect_password') {
+        errorMessage = "Mật khẩu ứng dụng không chính xác.";
+      }
     } else if (error.response?.status === 403) {
       errorMessage = "Bạn không có quyền truy cập vào danh sách người dùng.";
     }
@@ -141,7 +149,14 @@ export const testWordPressApiConnection = async () => {
     
     // Thêm thông tin chi tiết hơn về lỗi xác thực
     if (status === 401) {
-      errorMessage = "Xác thực thất bại. Tên đăng nhập hoặc mật khẩu không đúng.";
+      const wpError = error.response?.data?.code;
+      if (wpError === 'invalid_username') {
+        errorMessage = "Tên đăng nhập WordPress không hợp lệ hoặc không tồn tại.";
+      } else if (wpError === 'incorrect_password') {
+        errorMessage = "Mật khẩu ứng dụng không chính xác.";
+      } else {
+        errorMessage = "Xác thực thất bại. Tên đăng nhập hoặc mật khẩu không đúng.";
+      }
     } else if (status === 403) {
       errorMessage = "Tài khoản của bạn không có đủ quyền truy cập API.";
     }

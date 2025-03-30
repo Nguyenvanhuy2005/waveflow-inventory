@@ -21,11 +21,33 @@ export const testApiConnection = async () => {
       message: "Kết nối thành công với API",
       data: response.data,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("API connection test failed:", error);
+    
+    let errorMessage = "Kết nối thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.";
+    
+    // Extract more detailed error messages when available
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage = "Xác thực thất bại. Vui lòng kiểm tra lại tên đăng nhập và mật khẩu.";
+        
+        // Additional context for specific WordPress auth errors
+        const wpError = error.response.data?.code;
+        if (wpError === 'invalid_username') {
+          errorMessage = "Tên đăng nhập WordPress không hợp lệ hoặc không tồn tại.";
+        } else if (wpError === 'incorrect_password') {
+          errorMessage = "Mật khẩu ứng dụng không chính xác.";
+        }
+      } else if (error.response.status === 403) {
+        errorMessage = "Tài khoản của bạn không có đủ quyền truy cập API.";
+      } else if (error.response.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+    }
+    
     return {
       success: false,
-      message: "Kết nối thất bại. Vui lòng kiểm tra thông tin đăng nhập.",
+      message: errorMessage,
       error,
     };
   }

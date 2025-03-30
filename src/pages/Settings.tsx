@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Settings = () => {
   const queryClient = useQueryClient();
-  const [wpUsername, setWpUsername] = useState("Admin.hcm.sithethao");
+  const [wpUsername, setWpUsername] = useState("sithethao");
   const [wpPassword, setWpPassword] = useState("LDUe HXkt Le1k ZmJT tkmL OVHs");
   const [consumerKey, setConsumerKey] = useState("ck_7935a07888db15201ea09300934d277d69064c33");
   const [consumerSecret, setConsumerSecret] = useState("cs_27bd2111e8402f827a7261707125929171061a2d");
@@ -23,7 +24,7 @@ const Settings = () => {
     const loadSettings = async () => {
       const result = await getStockwaveSettings();
       if (result.success && result.data) {
-        setWpUsername(result.data.wpUsername || "Admin.hcm.sithethao");
+        setWpUsername(result.data.wpUsername || "sithethao");
         setWpPassword(result.data.wpPassword || "");
         setConsumerKey(result.data.consumerKey || "");
         setConsumerSecret(result.data.consumerSecret || "");
@@ -55,12 +56,16 @@ const Settings = () => {
       if (data.success) {
         toast.success("Kết nối API thành công");
       } else {
-        toast.error("Kết nối API thất bại");
+        toast.error(`Kết nối API thất bại: ${data.message}`);
       }
     },
-    onError: () => {
-      setTestResult({ success: false, message: "Kết nối API thất bại. Vui lòng kiểm tra lại thông tin đăng nhập." });
-      toast.error("Kết nối API thất bại");
+    onError: (error: any) => {
+      const errorMessage = error.message || "Kết nối API thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.";
+      setTestResult({ 
+        success: false, 
+        message: `Kết nối API thất bại: ${errorMessage}` 
+      });
+      toast.error(`Kết nối API thất bại: ${errorMessage}`);
     },
   });
 
@@ -97,14 +102,14 @@ const Settings = () => {
             <h3 className="font-medium">WordPress REST API</h3>
             <Alert className="mb-4">
               <Info className="h-4 w-4" />
-              <AlertTitle>Mật khẩu ứng dụng</AlertTitle>
+              <AlertTitle>Tên người dùng và mật khẩu ứng dụng</AlertTitle>
               <AlertDescription>
-                Sử dụng mật khẩu ứng dụng (Application Password) thay vì mật khẩu tài khoản chính để tăng cường bảo mật.
+                Sử dụng tên đăng nhập WordPress (không phải tên ứng dụng) và mật khẩu ứng dụng (Application Password) để xác thực API.
               </AlertDescription>
             </Alert>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="wpUsername">Tên người dùng</Label>
+                <Label htmlFor="wpUsername">Tên người dùng WordPress</Label>
                 <Input
                   id="wpUsername"
                   value={wpUsername}
