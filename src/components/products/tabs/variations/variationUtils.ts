@@ -11,6 +11,7 @@ interface Variation {
   sale_price: string;
   sku: string;
   stock_quantity?: number;
+  stock_status?: string;
   manage_stock?: boolean;
 }
 
@@ -119,6 +120,7 @@ export const createVariationsFromCombinations = (
       sale_price: defaultData.sale_price || '',
       sku: defaultData.sku || '',
       stock_quantity: defaultData.stock_quantity || 0,
+      stock_status: defaultData.stock_status || 'instock',
       manage_stock: defaultData.manage_stock || false
     };
   });
@@ -131,7 +133,9 @@ export const applyBulkActionToVariations = (
   variations: Variation[],
   action: string,
   regularPrice: string,
-  salePrice: string
+  salePrice: string,
+  stockStatus: string,
+  stockQuantity: string
 ): Variation[] => {
   const updatedVariations = [...variations];
 
@@ -149,11 +153,27 @@ export const applyBulkActionToVariations = (
       break;
       
     case "set_sku":
-      updatedVariations.forEach((variation, index) => {
+      updatedVariations.forEach(variation => {
         // Generate SKU with format SC+variation_id
-        const variationId = variation.id || index;
+        const variationId = variation.id || 0;
         variation.sku = `SC${variationId}`;
       });
+      break;
+
+    case "set_stock_status":
+      updatedVariations.forEach(variation => {
+        variation.stock_status = stockStatus;
+      });
+      break;
+
+    case "set_stock_quantity":
+      const quantity = parseInt(stockQuantity, 10);
+      if (!isNaN(quantity)) {
+        updatedVariations.forEach(variation => {
+          variation.manage_stock = true;
+          variation.stock_quantity = quantity;
+        });
+      }
       break;
       
     default:

@@ -41,7 +41,7 @@ const ProductForm = ({
   const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState("general");
   const [productType, setProductType] = useState("variable"); // Always set to variable
-  const [variations, setVariations] = useState<any[]>(product?.variations || []);
+  const [variations, setVariations] = useState<any[]>([]);
 
   // Initialize form with product data if editing
   const form = useForm<z.infer<typeof ProductFormSchema>>({
@@ -101,8 +101,10 @@ const ProductForm = ({
       setProductType("variable"); // Always set to variable
       
       // Set variations if they exist
-      if (product.variations && Array.isArray(product.variations)) {
-        setVariations(product.variations);
+      if (product.variationsDetails && Array.isArray(product.variationsDetails)) {
+        setVariations(product.variationsDetails);
+      } else {
+        setVariations([]);
       }
     }
   }, [product, form]);

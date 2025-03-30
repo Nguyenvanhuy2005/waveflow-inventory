@@ -8,13 +8,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 
 interface BulkActionsProps {
-  onApplyBulkAction: (action: string, regularPrice: string, salePrice: string) => void;
+  onApplyBulkAction: (action: string, regularPrice: string, salePrice: string, stockStatus: string, stockQuantity: string) => void;
 }
 
 const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
   const [bulkAction, setBulkAction] = useState<string>("");
   const [bulkPrice, setBulkPrice] = useState<string>("");
   const [bulkSalePrice, setBulkSalePrice] = useState<string>("");
+  const [bulkStockStatus, setBulkStockStatus] = useState<string>("instock");
+  const [bulkStockQuantity, setBulkStockQuantity] = useState<string>("");
 
   const handleApply = () => {
     if (!bulkAction) return;
@@ -32,14 +34,21 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
           return;
         }
         break;
+      case "set_stock_quantity":
+        if (bulkStockQuantity.trim() === "") {
+          toast.error("Vui lòng nhập số lượng tồn kho");
+          return;
+        }
+        break;
       default:
         break;
     }
 
-    onApplyBulkAction(bulkAction, bulkPrice, bulkSalePrice);
+    onApplyBulkAction(bulkAction, bulkPrice, bulkSalePrice, bulkStockStatus, bulkStockQuantity);
     setBulkAction("");
     setBulkPrice("");
     setBulkSalePrice("");
+    setBulkStockQuantity("");
   };
 
   return (
@@ -56,6 +65,8 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
                 <SelectItem value="set_regular_price">Đặt giá gốc</SelectItem>
                 <SelectItem value="set_sale_price">Đặt giá khuyến mãi</SelectItem>
                 <SelectItem value="set_sku">Đặt SKU (SC+id)</SelectItem>
+                <SelectItem value="set_stock_status">Đặt trạng thái tồn kho</SelectItem>
+                <SelectItem value="set_stock_quantity">Đặt số lượng tồn kho</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -80,6 +91,35 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
                 value={bulkSalePrice} 
                 onChange={(e) => setBulkSalePrice(e.target.value)}
                 placeholder="Nhập giá khuyến mãi"
+              />
+            </div>
+          )}
+
+          {bulkAction === "set_stock_status" && (
+            <div className="w-full md:w-1/4">
+              <Label>Trạng thái tồn kho</Label>
+              <Select value={bulkStockStatus} onValueChange={setBulkStockStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trạng thái..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instock">Còn hàng</SelectItem>
+                  <SelectItem value="outofstock">Hết hàng</SelectItem>
+                  <SelectItem value="onbackorder">Đặt trước</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {bulkAction === "set_stock_quantity" && (
+            <div className="w-full md:w-1/4">
+              <Label>Số lượng tồn kho</Label>
+              <Input 
+                type="number" 
+                value={bulkStockQuantity} 
+                onChange={(e) => setBulkStockQuantity(e.target.value)}
+                placeholder="Nhập số lượng"
+                min="0"
               />
             </div>
           )}

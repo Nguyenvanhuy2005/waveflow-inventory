@@ -20,6 +20,7 @@ interface Variation {
   sale_price: string;
   sku: string;
   stock_quantity?: number;
+  stock_status?: string;
   manage_stock?: boolean;
 }
 
@@ -78,6 +79,7 @@ const VariationsTab = ({
         sale_price: form.getValues('sale_price') || '',
         sku: form.getValues('sku') || '',
         stock_quantity: form.getValues('stock_quantity') || 0,
+        stock_status: form.getValues('stock_status') || 'instock',
         manage_stock: form.getValues('manage_stock') || false
       };
 
@@ -87,6 +89,37 @@ const VariationsTab = ({
         variations,
         defaultVariationData
       );
+
+      // If this is an existing product, preserve the variation IDs
+      if (product && product.variationsDetails && Array.isArray(product.variationsDetails)) {
+        // Map the existing variations by their attribute signature
+        const existingVariationsMap = new Map();
+        
+        product.variationsDetails.forEach((variation: any) => {
+          if (variation && variation.attributes && Array.isArray(variation.attributes)) {
+            const signature = variation.attributes
+              .map((attr: any) => `${attr.name}:${attr.option}`)
+              .sort()
+              .join('|');
+            existingVariationsMap.set(signature, variation.id);
+          }
+        });
+        
+        // Assign IDs to new variations if they match with existing ones
+        newVariations.forEach(variation => {
+          if (variation.attributes && Array.isArray(variation.attributes)) {
+            const signature = variation.attributes
+              .map(attr => `${attr.name}:${attr.option}`)
+              .sort()
+              .join('|');
+            
+            const existingId = existingVariationsMap.get(signature);
+            if (existingId) {
+              variation.id = existingId;
+            }
+          }
+        });
+      }
 
       setVariations(newVariations);
       toast.success(`Đã tạo ${newVariations.length} biến thể`);
@@ -126,14 +159,22 @@ const VariationsTab = ({
   };
 
   // Apply bulk action to all variations
-  const handleBulkAction = (action: string, regularPrice: string, salePrice: string) => {
+  const handleBulkAction = (
+    action: string, 
+    regularPrice: string, 
+    salePrice: string, 
+    stockStatus: string,
+    stockQuantity: string
+  ) => {
     if (!action) return;
 
     const updatedVariations = applyBulkActionToVariations(
       variations,
       action,
       regularPrice,
-      salePrice
+      salePrice,
+      stockStatus,
+      stockQuantity
     );
     
     setVariations(updatedVariations);
@@ -148,6 +189,12 @@ const VariationsTab = ({
         break;
       case "set_sku":
         toast.success("Đã cập nhật SKU cho tất cả biến thể theo định dạng SC+id");
+        break;
+      case "set_stock_status":
+        toast.success("Đã cập nhật trạng thái tồn kho cho tất cả biến thể");
+        break;
+      case "set_stock_quantity":
+        toast.success("Đã cập nhật số lượng tồn kho cho tất cả biến thể");
         break;
       default:
         break;
