@@ -40,7 +40,12 @@ const ProductDetail = () => {
     if (product) {
       // Update product attributes if available
       if (product.attributes && product.attributes.length > 0) {
-        setSelectedAttributes(product.attributes);
+        console.log("Loading product attributes:", product.attributes);
+        setSelectedAttributes(product.attributes.map(attr => ({
+          ...attr,
+          // Ensure options is always an array
+          options: Array.isArray(attr.options) ? attr.options : []
+        })));
       }
 
       // Update image preview URLs if available

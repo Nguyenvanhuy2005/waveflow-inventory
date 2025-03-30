@@ -39,20 +39,25 @@ const ProductTabs = ({
     queryFn: () => getProductAttributes(),
   });
 
-  // Lấy danh sách các giá trị của thuộc tính
-  const { data: attributeTerms } = useQuery({
-    queryKey: ["attribute-terms", selectedAttributes.map(attr => attr.id)],
+  // Lấy danh sách các giá trị của thuộc tính, chỉ cho thuộc tính có id > 0
+  const { data: attributeTerms, isLoading: loadingTerms } = useQuery({
+    queryKey: ["attribute-terms", selectedAttributes.map(attr => attr.id).filter(id => id > 0)],
     queryFn: async () => {
       const results: Record<number, any[]> = {};
-      for (const attr of selectedAttributes) {
-        if (attr.id) {
+      const attributesToFetch = selectedAttributes.filter(attr => attr.id > 0);
+      
+      for (const attr of attributesToFetch) {
+        try {
           const terms = await getProductAttributeTerms(attr.id);
           results[attr.id] = terms;
+        } catch (error) {
+          console.error(`Error fetching terms for attribute ${attr.id}:`, error);
+          results[attr.id] = [];
         }
       }
       return results;
     },
-    enabled: selectedAttributes.length > 0,
+    enabled: selectedAttributes.some(attr => attr.id > 0),
   });
 
   return (
