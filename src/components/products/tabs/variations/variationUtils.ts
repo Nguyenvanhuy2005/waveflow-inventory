@@ -13,6 +13,10 @@ interface Variation {
   stock_quantity?: number;
   stock_status?: string;
   manage_stock?: boolean;
+  image?: {
+    id?: number;
+    src?: string;
+  };
 }
 
 interface VariationAttribute {
@@ -30,12 +34,14 @@ export const generateVariationCombinations = (
   attributes: VariationAttribute[]
 ): AttributeOption[][] => {
   // Filter attributes marked for variations
-  const attributesForVariation = attributes.filter(attr => attr.variation);
+  const attributesForVariation = attributes.filter(attr => attr.variation === true);
   
   if (attributesForVariation.length === 0) {
+    console.log("No attributes marked for variations");
     return [];
   }
 
+  console.log("Generating variations for attributes:", attributesForVariation);
   const combinations: AttributeOption[][] = [];
   
   // This function generates all possible combinations recursively
@@ -76,6 +82,7 @@ export const generateVariationCombinations = (
   };
 
   generateCombinations(attributesForVariation, 0, [], combinations);
+  console.log("Generated combinations:", combinations);
   return combinations;
 };
 
@@ -123,7 +130,8 @@ export const createVariationsFromCombinations = (
       sku: defaultData.sku || '',
       stock_quantity: defaultData.stock_quantity || 0,
       stock_status: defaultData.stock_status || 'instock',
-      manage_stock: defaultData.manage_stock || false
+      manage_stock: defaultData.manage_stock || false,
+      image: defaultData.image || undefined
     };
   });
 };
@@ -161,8 +169,8 @@ export const applyBulkActionToVariations = (
       
     case "set_sku":
       updatedVariations.forEach(variation => {
-        // Generate SKU with format SC+variation_id
-        const variationId = variation.id || 0;
+        // Generate SKU with format SC+variation_id if exists, otherwise SC+index
+        const variationId = variation.id || Math.floor(Math.random() * 1000);
         variation.sku = `SC${variationId}`;
       });
       break;
@@ -181,6 +189,12 @@ export const applyBulkActionToVariations = (
           variation.stock_quantity = quantity;
         });
       }
+      break;
+      
+    case "toggle_manage_stock":
+      updatedVariations.forEach(variation => {
+        variation.manage_stock = true;
+      });
       break;
       
     default:
@@ -218,6 +232,13 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
     if (variation.stock_status) formattedVariation.stock_status = variation.stock_status;
     if (variation.stock_quantity !== undefined) formattedVariation.stock_quantity = variation.stock_quantity;
     if (variation.manage_stock !== undefined) formattedVariation.manage_stock = variation.manage_stock;
+    
+    // Include image if present
+    if (variation.image && variation.image.id) {
+      formattedVariation.image = {
+        id: variation.image.id
+      };
+    }
     
     // Format attributes correctly for WooCommerce API
     if (variation.attributes && Array.isArray(variation.attributes)) {
@@ -280,4 +301,28 @@ export const findMatchingVariationIds = (
 export const generateVariationSku = (baseSku: string, variationId: number | undefined): string => {
   if (!variationId) return baseSku ? `${baseSku}-variant` : '';
   return baseSku ? `${baseSku}-${variationId}` : `SC${variationId}`;
+};
+
+/**
+ * Update variation image
+ */
+export const updateVariationImage = (
+  variations: Variation[],
+  index: number,
+  imageData: { id?: number, src?: string }
+): Variation[] => {
+  if (!Array.isArray(variations)) {
+    console.error("Invalid variations data:", variations);
+    return [];
+  }
+  
+  const updatedVariations = [...variations];
+  if (index >= 0 && index < updatedVariations.length) {
+    updatedVariations[index] = {
+      ...updatedVariations[index],
+      image: imageData
+    };
+  }
+  
+  return updatedVariations;
 };

@@ -1,4 +1,3 @@
-
 import { wcApiClient } from "./apiConfig";
 
 export interface Product {
@@ -494,6 +493,49 @@ export const deleteProductVariation = async (productId: number, variationId: num
     return response.data;
   } catch (error) {
     console.error(`Error deleting variation ${variationId} for product ${productId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Upload an image for a specific product variation
+ */
+export const uploadProductVariationImage = async (productId: number, variationId: number, file: File) => {
+  try {
+    // Create FormData object with the image
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('name', file.name);
+    
+    console.log(`Uploading image for product ${productId}, variation ${variationId}`);
+    
+    // Send the request to the WooCommerce API
+    const response = await wcApiClient.post(
+      `/products/${productId}/variations/${variationId}`, 
+      formData, 
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    
+    // Return the image data from the response
+    if (response.data && response.data.image) {
+      console.log("Variation image uploaded successfully:", response.data.image);
+      return response.data.image;
+    }
+    
+    // If the image wasn't returned in the response, create a temporary URL
+    const tempUrl = URL.createObjectURL(file);
+    console.log("Creating temporary URL for uploaded image:", tempUrl);
+    
+    return {
+      id: 0,  // Temporary ID
+      src: tempUrl
+    };
+  } catch (error) {
+    console.error(`Error uploading image for variation ${variationId}:`, error);
     throw error;
   }
 };

@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { getProductCategories, getProductAttributes, getProductAttributeTerms } from "@/services/productService";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +23,7 @@ interface ProductTabsProps {
   setVariations: (variations: any[]) => void;
   setSelectedImages: (files: File[]) => void;
   setImagePreviewUrls: (urls: string[]) => void;
+  uploadVariationImage?: (productId: number | null, variationId: number | undefined, file: File) => Promise<any>;
 }
 
 const ProductTabs = ({
@@ -39,7 +41,8 @@ const ProductTabs = ({
   variations,
   setVariations,
   setSelectedImages,
-  setImagePreviewUrls
+  setImagePreviewUrls,
+  uploadVariationImage
 }: ProductTabsProps) => {
   const { data: categories } = useQuery({
     queryKey: ["product-categories"],
@@ -115,11 +118,13 @@ const ProductTabs = ({
         <VariationsTab
           form={form}
           product={product}
+          productId={productId}
           productType={productType}
           selectedAttributes={selectedAttributes}
           variations={variations}
           setVariations={setVariations}
           isLoadingVariations={false}
+          uploadVariationImage={uploadVariationImage}
         />
       </TabsContent>
     </Tabs>

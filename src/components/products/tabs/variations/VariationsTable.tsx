@@ -10,7 +10,8 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Trash, LoaderCircle } from "lucide-react";
+import { Trash, LoaderCircle, Image } from "lucide-react";
+import { useRef } from "react";
 
 interface Variation {
   id?: number;
@@ -23,6 +24,10 @@ interface Variation {
   sku: string;
   stock_quantity?: number;
   manage_stock?: boolean;
+  image?: {
+    id?: number;
+    src?: string;
+  };
 }
 
 interface VariationsTableProps {
@@ -30,32 +35,50 @@ interface VariationsTableProps {
   isLoadingVariations: boolean;
   onUpdateVariation: (index: number, field: string, value: any) => void;
   onDeleteVariation: (index: number) => void;
+  onSelectVariationImage: (index: number, file: File) => void;
 }
 
 const VariationsTable = ({ 
   variations, 
   isLoadingVariations, 
   onUpdateVariation,
-  onDeleteVariation
+  onDeleteVariation,
+  onSelectVariationImage
 }: VariationsTableProps) => {
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleImageClick = (index: number) => {
+    if (fileInputRefs.current[index]) {
+      fileInputRefs.current[index]?.click();
+    }
+  };
+
+  const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onSelectVariationImage(index, e.target.files[0]);
+    }
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[25%]">Biến thể</TableHead>
-            <TableHead className="w-[14%]">Giá gốc</TableHead>
-            <TableHead className="w-[14%]">Giá khuyến mãi</TableHead>
-            <TableHead className="w-[18%]">SKU</TableHead>
-            <TableHead className="w-[10%]">Tồn kho</TableHead>
-            <TableHead className="w-[10%]">Quản lý kho</TableHead>
-            <TableHead className="w-[9%]">Thao tác</TableHead>
+            <TableHead className="w-[5%]">ID</TableHead>
+            <TableHead className="w-[20%]">Biến thể</TableHead>
+            <TableHead className="w-[10%]">Giá gốc</TableHead>
+            <TableHead className="w-[10%]">Giá KM</TableHead>
+            <TableHead className="w-[15%]">SKU</TableHead>
+            <TableHead className="w-[7%]">Tồn kho</TableHead>
+            <TableHead className="w-[8%]">Quản lý</TableHead>
+            <TableHead className="w-[15%]">Hình ảnh</TableHead>
+            <TableHead className="w-[10%]">Thao tác</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoadingVariations ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={9} className="h-24 text-center">
                 <div className="flex items-center justify-center">
                   <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
                   <span>Đang tải biến thể...</span>
@@ -65,6 +88,9 @@ const VariationsTable = ({
           ) : (
             variations.map((variation, index) => (
               <TableRow key={index}>
+                <TableCell>
+                  {variation.id || <span className="text-muted-foreground italic">Mới</span>}
+                </TableCell>
                 <TableCell className="font-medium">
                   {variation.attributes && variation.attributes.length > 0 ? (
                     variation.attributes.map(attr => (
@@ -110,6 +136,31 @@ const VariationsTable = ({
                     <Switch
                       checked={variation.manage_stock || false}
                       onCheckedChange={(checked) => onUpdateVariation(index, "manage_stock", checked)}
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-10 h-10 border rounded cursor-pointer flex items-center justify-center bg-muted/30"
+                      onClick={() => handleImageClick(index)}
+                    >
+                      {variation.image && variation.image.src ? (
+                        <img 
+                          src={variation.image.src} 
+                          alt={`Biến thể ${index}`} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Image className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(index, e)}
+                      ref={el => fileInputRefs.current[index] = el}
                     />
                   </div>
                 </TableCell>

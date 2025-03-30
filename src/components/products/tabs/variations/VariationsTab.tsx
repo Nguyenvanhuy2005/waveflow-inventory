@@ -1,8 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Grid, RotateCcw, LoaderCircle } from "lucide-react";
+import { Grid, RotateCcw, LoaderCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import NoVariationsState from "./NoVariationsState";
 import BulkActions from "./BulkActions";
@@ -12,7 +12,8 @@ import {
   generateVariationCombinations, 
   createVariationsFromCombinations, 
   applyBulkActionToVariations,
-  findMatchingVariationIds
+  findMatchingVariationIds,
+  updateVariationImage
 } from "./variationUtils";
 
 interface Variation {
@@ -27,6 +28,15 @@ interface Variation {
   stock_quantity?: number;
   stock_status?: string;
   manage_stock?: boolean;
+  image?: {
+    id?: number;
+    src?: string;
+  };
+}
+
+interface VariationImage {
+  id: number;
+  src: string;
 }
 
 interface VariationsTabProps {
@@ -37,6 +47,8 @@ interface VariationsTabProps {
   variations: Variation[];
   setVariations: (variations: Variation[]) => void;
   isLoadingVariations?: boolean;
+  uploadVariationImage?: (productId: number | null, variationId: number | undefined, file: File) => Promise<VariationImage>;
+  productId: number | null;
 }
 
 const VariationsTab = ({ 
@@ -46,23 +58,40 @@ const VariationsTab = ({
   selectedAttributes,
   variations,
   setVariations,
-  isLoadingVariations = false
+  isLoadingVariations = false,
+  uploadVariationImage,
+  productId
 }: VariationsTabProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [deleteVariationIndex, setDeleteVariationIndex] = useState<number | null>(null);
   const [isDeleteVariationDialogOpen, setIsDeleteVariationDialogOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [attributeWarning, setAttributeWarning] = useState<string | null>(null);
+
+  // Check for attributes marked for variations
+  useEffect(() => {
+    const variationAttributes = selectedAttributes.filter(attr => attr.variation === true);
+    if (variationAttributes.length === 0) {
+      setAttributeWarning("Không có thuộc tính nào được đánh dấu để tạo biến thể. Vui lòng đánh dấu ít nhất một thuộc tính ở tab Thuộc tính.");
+    } else if (variationAttributes.some(attr => !attr.options || attr.options.length === 0)) {
+      setAttributeWarning("Có thuộc tính được đánh dấu để tạo biến thể nhưng không có giá trị nào. Vui lòng thêm giá trị cho các thuộc tính.");
+    } else {
+      setAttributeWarning(null);
+    }
+  }, [selectedAttributes]);
 
   // Get variation attributes - only those with 'variation' flag set to true
-  const variationAttributes = selectedAttributes.filter(attr => attr.variation);
+  const variationAttributes = selectedAttributes.filter(attr => attr.variation === true);
 
   // Check if we have attributes set for variations
-  const hasVariationAttributes = variationAttributes.length > 0;
+  const hasVariationAttributes = variationAttributes.length > 0 && 
+    variationAttributes.every(attr => attr.options && attr.options.length > 0);
 
   // Generate all possible variations from selected attributes
   const generateVariations = () => {
     if (!hasVariationAttributes) {
-      toast.error("Không có thuộc tính nào được đánh dấu để tạo biến thể. Hãy đánh dấu ít nhất một thuộc tính.");
+      toast.error("Không có thuộc tính nào được đánh dấu để tạo biến thể hoặc thuộc tính không có giá trị. Vui lòng kiểm tra lại tab Thuộc tính.");
       return;
     }
 
@@ -73,7 +102,7 @@ const VariationsTab = ({
       const combinations = generateVariationCombinations(selectedAttributes);
       
       if (combinations.length === 0) {
-        toast.error("Không có thuộc tính nào được đánh dấu để tạo biến thể");
+        toast.error("Không thể tạo biến thể từ thuộc tính đã chọn");
         setIsGenerating(false);
         return;
       }
@@ -113,11 +142,14 @@ const VariationsTab = ({
               .map((attr: any) => `${attr.name}:${attr.option}`)
               .sort()
               .join('|');
-            existingVariationsMap.set(signature, variation.id);
+            existingVariationsMap.set(signature, {
+              id: variation.id,
+              image: variation.image
+            });
           }
         });
         
-        // Assign IDs to new variations if they match with existing ones
+        // Assign IDs and images to new variations if they match with existing ones
         newVariations.forEach(variation => {
           if (variation.attributes && Array.isArray(variation.attributes)) {
             const signature = variation.attributes
@@ -125,13 +157,18 @@ const VariationsTab = ({
               .sort()
               .join('|');
             
-            const existingId = existingVariationsMap.get(signature);
-            if (existingId) {
-              variation.id = existingId;
+            const existingData = existingVariationsMap.get(signature);
+            if (existingData) {
+              variation.id = existingData.id;
+              
+              // Set image if it exists
+              if (existingData.image) {
+                variation.image = existingData.image;
+              }
               
               // Set SKU using the ID if it exists (SC + ID format)
-              if (!variation.sku && existingId) {
-                variation.sku = `SC${existingId}`;
+              if (!variation.sku && existingData.id) {
+                variation.sku = `SC${existingData.id}`;
               }
             }
           }
@@ -213,6 +250,9 @@ const VariationsTab = ({
       case "set_stock_quantity":
         toast.success("Đã cập nhật số lượng tồn kho cho tất cả biến thể");
         break;
+      case "toggle_manage_stock":
+        toast.success("Đã bật quản lý kho cho tất cả biến thể");
+        break;
       default:
         break;
     }
@@ -225,16 +265,44 @@ const VariationsTab = ({
     toast.info("Đã xóa tất cả biến thể");
   };
 
+  // Handle variation image selection
+  const handleSelectVariationImage = async (index: number, file: File) => {
+    if (!uploadVariationImage || !productId) {
+      toast.error("Không thể tải lên hình ảnh vào lúc này");
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      const variation = variations[index];
+      
+      // Upload the image and get the response
+      const imageData = await uploadVariationImage(productId, variation.id, file);
+      
+      // Update the variation with new image
+      const updatedVariations = updateVariationImage(variations, index, imageData);
+      setVariations(updatedVariations);
+      
+      toast.success("Đã tải lên hình ảnh cho biến thể");
+    } catch (error) {
+      console.error("Error uploading variation image:", error);
+      toast.error("Có lỗi xảy ra khi tải lên hình ảnh");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   return (
     <div className="space-y-4 pt-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Biến thể sản phẩm</CardTitle>
-            {!hasVariationAttributes && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Chưa có thuộc tính nào được đánh dấu để tạo biến thể. Vui lòng chọn ít nhất một thuộc tính trong tab Thuộc tính.
-              </p>
+            {attributeWarning && (
+              <div className="flex items-center text-amber-500 mt-2">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                <p className="text-sm">{attributeWarning}</p>
+              </div>
             )}
           </div>
           <div className="flex gap-2">
@@ -280,9 +348,10 @@ const VariationsTab = ({
               {/* Variations table */}
               <VariationsTable 
                 variations={variations}
-                isLoadingVariations={isLoadingVariations}
+                isLoadingVariations={isLoadingVariations || isUploadingImage}
                 onUpdateVariation={updateVariation}
                 onDeleteVariation={confirmDeleteVariation}
+                onSelectVariationImage={handleSelectVariationImage}
               />
             </>
           )}

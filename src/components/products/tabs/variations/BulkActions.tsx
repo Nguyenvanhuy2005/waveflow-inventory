@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { CheckCircle } from "lucide-react";
 
 interface BulkActionsProps {
   onApplyBulkAction: (action: string, regularPrice: string, salePrice: string, stockStatus: string, stockQuantity: string) => void;
@@ -68,6 +69,7 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
                 <SelectItem value="set_sku">Đặt SKU (SC+ID)</SelectItem>
                 <SelectItem value="set_stock_status">Đặt trạng thái tồn kho</SelectItem>
                 <SelectItem value="set_stock_quantity">Đặt số lượng tồn kho</SelectItem>
+                <SelectItem value="toggle_manage_stock">Bật/tắt quản lý kho</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -122,6 +124,15 @@ const BulkActions = ({ onApplyBulkAction }: BulkActionsProps) => {
                 placeholder="Nhập số lượng"
                 min="0"
               />
+            </div>
+          )}
+
+          {bulkAction === "toggle_manage_stock" && (
+            <div className="w-full md:w-1/4">
+              <div className="flex items-center space-x-2 h-10 mt-6">
+                <CheckCircle className="h-4 w-4" />
+                <span>Bật quản lý kho cho tất cả biến thể</span>
+              </div>
             </div>
           )}
 

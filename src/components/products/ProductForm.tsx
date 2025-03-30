@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createProduct, updateProduct } from "@/services/productService";
+import { createProduct, updateProduct, uploadProductVariationImage } from "@/services/productService";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
@@ -109,6 +109,21 @@ const ProductForm = ({
     }
   }, [product, form]);
 
+  // Handler to upload variation image
+  const handleUploadVariationImage = async (productId: number | null, variationId: number | undefined, file: File) => {
+    if (!productId || !variationId) {
+      throw new Error("Product ID and variation ID are required to upload an image");
+    }
+    
+    try {
+      const response = await uploadProductVariationImage(productId, variationId, file);
+      return response;
+    } catch (error) {
+      console.error("Error uploading variation image:", error);
+      throw error;
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: (data: any) => {
       // Prepare the data for API submission
@@ -123,7 +138,11 @@ const ProductForm = ({
       }
       
       // Add attributes
-      preparedData.attributes = selectedAttributes;
+      preparedData.attributes = selectedAttributes.map(attr => ({
+        ...attr,
+        visible: attr.visible === undefined ? true : attr.visible,
+        variation: attr.variation === undefined ? false : attr.variation
+      }));
       
       // Format and add variations for API submission
       preparedData.variations = formatVariationAttributesForApi(variations);
@@ -168,6 +187,22 @@ const ProductForm = ({
     console.log("Product type:", productType);
     console.log("Variations:", variations);
     
+    // Validate attributes for variations
+    const variationAttributes = selectedAttributes.filter(attr => attr.variation === true);
+    if (productType === "variable" && variationAttributes.length === 0) {
+      toast.error("Sản phẩm biến thể cần ít nhất một thuộc tính được đánh dấu 'Dùng cho biến thể'");
+      setSelectedTab("attributes");
+      return;
+    }
+    
+    // Check if variation attributes have values
+    const attributesWithoutOptions = variationAttributes.filter(attr => !attr.options || attr.options.length === 0);
+    if (attributesWithoutOptions.length > 0) {
+      toast.error(`Thuộc tính ${attributesWithoutOptions.map(a => a.name).join(", ")} không có giá trị. Vui lòng thêm giá trị cho thuộc tính.`);
+      setSelectedTab("attributes");
+      return;
+    }
+    
     // Ensure variations have proper prices
     const validatedVariations = variations.map(variation => {
       return {
@@ -208,6 +243,7 @@ const ProductForm = ({
           setVariations={setVariations}
           setSelectedImages={setSelectedImages}
           setImagePreviewUrls={setImagePreviewUrls}
+          uploadVariationImage={handleUploadVariationImage}
         />
         
         <div className="mt-4 flex justify-end">
