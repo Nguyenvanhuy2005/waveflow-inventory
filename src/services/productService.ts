@@ -106,13 +106,23 @@ export const getProduct = async (id: number) => {
 };
 
 export const createProduct = async (productData: Partial<Product>) => {
-  const response = await wcApiClient.post<Product>("/products", productData);
-  return response.data;
+  try {
+    const response = await wcApiClient.post<Product>("/products", productData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating product:", error);
+    throw error;
+  }
 };
 
 export const updateProduct = async (id: number, productData: Partial<Product>) => {
-  const response = await wcApiClient.put<Product>(`/products/${id}`, productData);
-  return response.data;
+  try {
+    const response = await wcApiClient.put<Product>(`/products/${id}`, productData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating product ${id}:`, error);
+    throw error;
+  }
 };
 
 export const deleteProduct = async (id: number) => {
@@ -120,9 +130,15 @@ export const deleteProduct = async (id: number) => {
   return response.data;
 };
 
-export const getProductCategories = async () => {
-  const response = await wcApiClient.get("/products/categories");
-  return response.data;
+export const getProductCategories = async (params?: { per_page?: number; page?: number }) => {
+  try {
+    const defaultParams = { per_page: 100, ...params };
+    const response = await wcApiClient.get("/products/categories", { params: defaultParams });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching product categories:", error);
+    return [];
+  }
 };
 
 export const getLowStockProducts = async (threshold: number = 5) => {
@@ -137,4 +153,38 @@ export const getLowStockProducts = async (threshold: number = 5) => {
     product.stock_quantity !== null && 
     product.stock_quantity <= threshold
   );
+};
+
+export const uploadProductImage = async (productId: number, formData: FormData) => {
+  try {
+    const response = await wcApiClient.post(`/products/${productId}/images`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error uploading product image:", error);
+    throw error;
+  }
+};
+
+export const getProductAttributes = async () => {
+  try {
+    const response = await wcApiClient.get("/products/attributes");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching product attributes:", error);
+    return [];
+  }
+};
+
+export const getProductAttributeTerms = async (attributeId: number) => {
+  try {
+    const response = await wcApiClient.get(`/products/attributes/${attributeId}/terms`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching terms for attribute ${attributeId}:`, error);
+    return [];
+  }
 };
