@@ -90,11 +90,13 @@ export const createVariationsFromCombinations = (
   const existingVariationMap = new Map<string, Variation>();
   
   existingVariations.forEach(variation => {
-    const signature = variation.attributes
-      .map(attr => `${attr.name}:${attr.option}`)
-      .sort()
-      .join('|');
-    existingVariationMap.set(signature, variation);
+    if (variation.attributes && Array.isArray(variation.attributes)) {
+      const signature = variation.attributes
+        .map(attr => `${attr.name}:${attr.option}`)
+        .sort()
+        .join('|');
+      existingVariationMap.set(signature, variation);
+    }
   });
 
   // Create new variations array with all required combinations
@@ -166,7 +168,17 @@ export const applyBulkActionToVariations = (
  * WooCommerce API expects a specific format for attributes
  */
 export const formatVariationAttributesForApi = (variations: Variation[]): any[] => {
+  if (!Array.isArray(variations)) {
+    console.error("Invalid variations data:", variations);
+    return [];
+  }
+
   return variations.map(variation => {
+    if (!variation || typeof variation !== 'object') {
+      console.error("Invalid variation item:", variation);
+      return {};
+    }
+    
     // Create a new object with all the properties of the original variation
     const formattedVariation = { ...variation };
     
@@ -176,9 +188,10 @@ export const formatVariationAttributesForApi = (variations: Variation[]): any[] 
         name: attr.name,
         option: attr.option
       }));
+    } else {
+      formattedVariation.attributes = [];
     }
     
     return formattedVariation;
   });
 };
-
