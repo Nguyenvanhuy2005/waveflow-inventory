@@ -100,10 +100,21 @@ const ProductForm = ({
   }, [product, form]);
 
   const mutation = useMutation({
-    mutationFn: (data: any) =>
-      isNewProduct
-        ? createProduct(data)
-        : updateProduct(productId!, data),
+    mutationFn: (data: any) => {
+      // Prepare the data for API submission
+      const preparedData = { ...data };
+      
+      // Format categories as expected by WooCommerce API
+      if (preparedData.categories && preparedData.categories.length > 0) {
+        preparedData.categories = preparedData.categories.map((id: number) => ({ id }));
+      }
+      
+      console.log("Sending to API:", preparedData);
+      
+      return isNewProduct
+        ? createProduct(preparedData)
+        : updateProduct(productId!, preparedData);
+    },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["product", productId] });
       queryClient.invalidateQueries({ queryKey: ["products"] });

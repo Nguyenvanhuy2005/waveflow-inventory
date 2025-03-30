@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import ProductForm from "@/components/products/ProductForm";
 import { toast } from "sonner";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +21,7 @@ const ProductDetail = () => {
   const [selectedAttributes, setSelectedAttributes] = useState<any[]>([]);
 
   // Load product data
-  const { data: product, isPending, error } = useQuery({
+  const { data: product, isPending, error, isError } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => (productId ? getProduct(productId) : Promise.resolve(null)),
     enabled: !isNewProduct && !!productId,
@@ -58,6 +59,26 @@ const ProductDetail = () => {
           <div className="loading-spinner" />
           <p className="mt-2">Đang tải thông tin sản phẩm...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!isNewProduct && isError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => navigate("/products")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">Không tìm thấy sản phẩm</h1>
+        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Lỗi</AlertTitle>
+          <AlertDescription>
+            Không thể tải thông tin sản phẩm. Vui lòng quay lại sau hoặc thử với sản phẩm khác.
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => navigate("/products")}>Quay lại danh sách sản phẩm</Button>
       </div>
     );
   }
