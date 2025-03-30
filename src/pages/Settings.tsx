@@ -12,8 +12,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Settings = () => {
   const queryClient = useQueryClient();
-  const [wpUsername, setWpUsername] = useState("Admin.hcm.sithethao");
-  const [wpPassword, setWpPassword] = useState("LDUe HXkt Le1k ZmJT tkmL OVHs");
+  const [wpUsername, setWpUsername] = useState("Sithethao");
+  const [wpPassword, setWpPassword] = useState("Seco2025@");
   const [consumerKey, setConsumerKey] = useState("ck_7935a07888db15201ea09300934d277d69064c33");
   const [consumerSecret, setConsumerSecret] = useState("cs_27bd2111e8402f827a7261707125929171061a2d");
   const [testResult, setTestResult] = useState<{success?: boolean; message?: string}>({});
@@ -106,7 +106,7 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="wpPassword">Mật khẩu ứng dụng</Label>
+                <Label htmlFor="wpPassword">Mật khẩu</Label>
                 <Input
                   id="wpPassword"
                   type="password"

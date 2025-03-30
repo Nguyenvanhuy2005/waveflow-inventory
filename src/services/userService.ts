@@ -38,7 +38,15 @@ export const getUsers = async (params?: UserSearchParams) => {
     return response.data;
   } catch (error: any) {
     console.error("Error fetching users:", error);
-    const errorMessage = error.response?.data?.message || error.message || "Lỗi khi tải dữ liệu người dùng";
+    let errorMessage = error.response?.data?.message || error.message || "Lỗi khi tải dữ liệu người dùng";
+    
+    // Phát hiện lỗi xác thực từ WordPress
+    if (error.response?.status === 401) {
+      errorMessage = "Xác thực thất bại. Vui lòng kiểm tra lại tên đăng nhập và mật khẩu của bạn.";
+    } else if (error.response?.status === 403) {
+      errorMessage = "Bạn không có quyền truy cập vào danh sách người dùng.";
+    }
+    
     toast.error(errorMessage);
     throw error;
   }
@@ -129,7 +137,15 @@ export const testWordPressApiConnection = async () => {
   } catch (error: any) {
     console.error("WordPress API connection test failed:", error);
     const status = error.response?.status || 'unknown';
-    const errorMessage = error.response?.data?.message || error.message || `Lỗi kết nối (${status})`;
+    let errorMessage = error.response?.data?.message || error.message || `Lỗi kết nối (${status})`;
+    
+    // Thêm thông tin chi tiết hơn về lỗi xác thực
+    if (status === 401) {
+      errorMessage = "Xác thực thất bại. Tên đăng nhập hoặc mật khẩu không đúng.";
+    } else if (status === 403) {
+      errorMessage = "Tài khoản của bạn không có đủ quyền truy cập API.";
+    }
+    
     return { 
       success: false, 
       error: errorMessage,
