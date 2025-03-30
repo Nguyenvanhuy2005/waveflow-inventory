@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProduct, createProduct, updateProduct, getProductCategories } from "@/services/productService";
+import { getProduct, createProduct, updateProduct, getProductCategories, getProductAttributes, getProductAttributeTerms } from "@/services/productService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,8 @@ import {
   Plus,
   Trash2,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -45,6 +46,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +58,7 @@ const ProductDetail = () => {
   const [selectedTab, setSelectedTab] = useState("general");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [selectedAttributes, setSelectedAttributes] = useState<any[]>([]);
 
   // Tạo schema cho việc validate form
   const productFormSchema = z.object({
@@ -79,8 +82,7 @@ const ProductDetail = () => {
       width: z.string().optional(),
       height: z.string().optional(),
     }).optional(),
-    tax_status: z.string().default("taxable"),
-    tax_class: z.string().optional(),
+    attributes: z.array(z.any()).optional(),
   });
 
   const { data: product, isPending } = useQuery({
@@ -92,6 +94,11 @@ const ProductDetail = () => {
   const { data: categories } = useQuery({
     queryKey: ["product-categories"],
     queryFn: () => getProductCategories(),
+  });
+
+  const { data: attributes } = useQuery({
+    queryKey: ["product-attributes"],
+    queryFn: () => getProductAttributes(),
   });
 
   const form = useForm<z.infer<typeof productFormSchema>>({
@@ -117,8 +124,7 @@ const ProductDetail = () => {
         width: "",
         height: "",
       },
-      tax_status: "taxable",
-      tax_class: "",
+      attributes: [],
     },
   });
 
@@ -147,9 +153,13 @@ const ProductDetail = () => {
           width: product.dimensions?.width || "",
           height: product.dimensions?.height || "",
         },
-        tax_status: product.tax_status || "taxable",
-        tax_class: product.tax_class || "",
+        attributes: product.attributes || [],
       });
+
+      // Cập nhật danh sách thuộc tính sản phẩm
+      if (product.attributes && product.attributes.length > 0) {
+        setSelectedAttributes(product.attributes);
+      }
 
       // Cập nhật danh sách hình ảnh nếu có
       if (product.images && product.images.length > 0) {
@@ -207,10 +217,108 @@ const ProductDetail = () => {
     setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Hàm xử lý thêm thuộc tính mới
+  const addAttribute = (attributeId: number, attributeName: string) => {
+    // Kiểm tra xem thuộc tính đã tồn tại chưa
+    const exists = selectedAttributes.some(attr => attr.id === attributeId);
+    if (exists) {
+      toast.error("Thuộc tính này đã được thêm");
+      return;
+    }
+
+    // Thêm thuộc tính mới
+    const newAttribute = {
+      id: attributeId,
+      name: attributeName,
+      position: selectedAttributes.length,
+      visible: true,
+      variation: false,
+      options: [] as string[],
+    };
+    setSelectedAttributes([...selectedAttributes, newAttribute]);
+  };
+
+  // Hàm xử lý xóa thuộc tính
+  const removeAttribute = (attributeId: number) => {
+    setSelectedAttributes(selectedAttributes.filter(attr => attr.id !== attributeId));
+  };
+
+  // Lấy danh sách các giá trị của thuộc tính
+  const { data: attributeTerms, refetch: refetchTerms } = useQuery({
+    queryKey: ["attribute-terms", selectedAttributes.map(attr => attr.id)],
+    queryFn: async () => {
+      const results: Record<number, any[]> = {};
+      for (const attr of selectedAttributes) {
+        if (attr.id) {
+          const terms = await getProductAttributeTerms(attr.id);
+          results[attr.id] = terms;
+        }
+      }
+      return results;
+    },
+    enabled: selectedAttributes.length > 0,
+  });
+
+  // Cập nhật giá trị thuộc tính
+  const updateAttributeOptions = (attributeId: number, options: string[]) => {
+    setSelectedAttributes(
+      selectedAttributes.map(attr => 
+        attr.id === attributeId ? { ...attr, options } : attr
+      )
+    );
+  };
+
+  // Thêm giá trị thuộc tính
+  const addAttributeOption = (attributeId: number, option: string) => {
+    setSelectedAttributes(
+      selectedAttributes.map(attr => {
+        if (attr.id === attributeId) {
+          // Kiểm tra xem option đã tồn tại chưa
+          if (attr.options.includes(option)) {
+            return attr;
+          }
+          return { ...attr, options: [...attr.options, option] };
+        }
+        return attr;
+      })
+    );
+  };
+
+  // Xóa giá trị thuộc tính
+  const removeAttributeOption = (attributeId: number, option: string) => {
+    setSelectedAttributes(
+      selectedAttributes.map(attr => {
+        if (attr.id === attributeId) {
+          return { ...attr, options: attr.options.filter(opt => opt !== option) };
+        }
+        return attr;
+      })
+    );
+  };
+
+  // Cập nhật cài đặt thuộc tính
+  const updateAttributeSetting = (attributeId: number, key: string, value: boolean) => {
+    setSelectedAttributes(
+      selectedAttributes.map(attr => {
+        if (attr.id === attributeId) {
+          return { ...attr, [key]: value };
+        }
+        return attr;
+      })
+    );
+  };
+
+  useEffect(() => {
+    // Cập nhật thuộc tính vào form
+    form.setValue('attributes', selectedAttributes);
+  }, [selectedAttributes, form]);
+
   const onSubmit = (values: z.infer<typeof productFormSchema>) => {
     // Kết hợp dữ liệu form với dữ liệu hình ảnh và các dữ liệu khác
     const formData = {
       ...values,
+      // Bao gồm thuộc tính đã được cập nhật
+      attributes: selectedAttributes,
       // TODO: Xử lý upload hình ảnh qua WooCommerce API
     };
     
@@ -263,12 +371,10 @@ const ProductDetail = () => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="grid grid-cols-5 md:w-[600px]">
+            <TabsList className="grid grid-cols-3 md:w-[600px]">
               <TabsTrigger value="general">Thông tin cơ bản</TabsTrigger>
               <TabsTrigger value="inventory">Kho hàng</TabsTrigger>
-              <TabsTrigger value="shipping">Vận chuyển</TabsTrigger>
               <TabsTrigger value="attributes">Thuộc tính</TabsTrigger>
-              <TabsTrigger value="advanced">Nâng cao</TabsTrigger>
             </TabsList>
             
             {/* Tab Thông tin cơ bản */}
@@ -631,154 +737,154 @@ const ProductDetail = () => {
               </Card>
             </TabsContent>
             
-            {/* Tab Vận chuyển */}
-            <TabsContent value="shipping" className="space-y-4 pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Thông tin vận chuyển</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="weight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cân nặng (kg)</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="text" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <FormField
-                      control={form.control}
-                      name="dimensions.length"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Chiều dài (cm)</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="text" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dimensions.width"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Chiều rộng (cm)</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="text" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dimensions.height"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Chiều cao (cm)</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="text" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
             {/* Tab Thuộc tính */}
             <TabsContent value="attributes" className="space-y-4 pt-4">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Thuộc tính sản phẩm</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">Chức năng này đang được phát triển.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => toast("Tính năng đang được phát triển")}
+                  <Select
+                    onValueChange={(value) => {
+                      const selectedAttr = attributes?.find(attr => attr.id.toString() === value);
+                      if (selectedAttr) {
+                        addAttribute(selectedAttr.id, selectedAttr.name);
+                      }
+                    }}
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Thêm thuộc tính
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Tab Nâng cao */}
-            <TabsContent value="advanced" className="space-y-4 pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cài đặt nâng cao</CardTitle>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Thêm thuộc tính" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {attributes?.map(attr => (
+                        <SelectItem 
+                          key={attr.id} 
+                          value={attr.id.toString()}
+                          disabled={selectedAttributes.some(a => a.id === attr.id)}
+                        >
+                          {attr.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="tax_status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Trạng thái thuế</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn trạng thái thuế" />
+                  {selectedAttributes.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">
+                      Chưa có thuộc tính nào được thêm
+                    </p>
+                  ) : (
+                    selectedAttributes.map((attr) => (
+                      <div key={attr.id} className="border rounded-md p-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-medium">{attr.name}</h3>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeAttribute(attr.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`visible-${attr.id}`}
+                              checked={attr.visible}
+                              onCheckedChange={(checked) => 
+                                updateAttributeSetting(attr.id, 'visible', !!checked)
+                              }
+                            />
+                            <label htmlFor={`visible-${attr.id}`}>Hiển thị</label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`variation-${attr.id}`}
+                              checked={attr.variation}
+                              onCheckedChange={(checked) => 
+                                updateAttributeSetting(attr.id, 'variation', !!checked)
+                              }
+                            />
+                            <label htmlFor={`variation-${attr.id}`}>Dùng cho biến thể</label>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Giá trị thuộc tính</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {attr.options.map((option: string) => (
+                              <Badge 
+                                key={option} 
+                                className="py-1 px-2 flex items-center gap-1"
+                                variant="secondary"
+                              >
+                                {option}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-4 w-4 p-0 rounded-full"
+                                  onClick={() => removeAttributeOption(attr.id, option)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Select
+                            onValueChange={(value) => addAttributeOption(attr.id, value)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Chọn giá trị" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="taxable">Chịu thuế</SelectItem>
-                            <SelectItem value="shipping">Chỉ vận chuyển</SelectItem>
-                            <SelectItem value="none">Không chịu thuế</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="tax_class"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lớp thuế</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn lớp thuế" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="">Tiêu chuẩn</SelectItem>
-                            <SelectItem value="reduced-rate">Giảm thuế</SelectItem>
-                            <SelectItem value="zero-rate">Không thuế</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            <SelectContent>
+                              {attributeTerms && attributeTerms[attr.id]?.map((term: any) => (
+                                <SelectItem 
+                                  key={term.id} 
+                                  value={term.name}
+                                  disabled={attr.options.includes(term.name)}
+                                >
+                                  {term.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="Hoặc nhập giá trị mới"
+                              className="w-64"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const value = (e.target as HTMLInputElement).value.trim();
+                                  if (value) {
+                                    addAttributeOption(attr.id, value);
+                                    (e.target as HTMLInputElement).value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={(e) => {
+                                const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                                const value = input.value.trim();
+                                if (value) {
+                                  addAttributeOption(attr.id, value);
+                                  input.value = '';
+                                }
+                              }}
+                            >
+                              Thêm
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

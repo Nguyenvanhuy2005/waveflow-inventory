@@ -75,7 +75,14 @@ export interface Product {
     name: string;
     alt: string;
   }[];
-  attributes: any[];
+  attributes: {
+    id: number;
+    name: string;
+    position: number;
+    visible: boolean;
+    variation: boolean;
+    options: string[];
+  }[];
   default_attributes: any[];
   variations: number[];
   grouped_products: number[];
@@ -85,6 +92,24 @@ export interface Product {
     key: string;
     value: any;
   }[];
+}
+
+export interface ProductAttribute {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  order_by: string;
+  has_archives: boolean;
+}
+
+export interface ProductAttributeTerm {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  menu_order: number;
+  count: number;
 }
 
 export interface ProductSearchParams {
@@ -171,7 +196,7 @@ export const uploadProductImage = async (productId: number, formData: FormData) 
 
 export const getProductAttributes = async () => {
   try {
-    const response = await wcApiClient.get("/products/attributes");
+    const response = await wcApiClient.get<ProductAttribute[]>("/products/attributes");
     return response.data;
   } catch (error) {
     console.error("Error fetching product attributes:", error);
@@ -181,10 +206,30 @@ export const getProductAttributes = async () => {
 
 export const getProductAttributeTerms = async (attributeId: number) => {
   try {
-    const response = await wcApiClient.get(`/products/attributes/${attributeId}/terms`);
+    const response = await wcApiClient.get<ProductAttributeTerm[]>(`/products/attributes/${attributeId}/terms`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching terms for attribute ${attributeId}:`, error);
     return [];
+  }
+};
+
+export const createProductAttribute = async (attributeData: Partial<ProductAttribute>) => {
+  try {
+    const response = await wcApiClient.post<ProductAttribute>("/products/attributes", attributeData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating product attribute:", error);
+    throw error;
+  }
+};
+
+export const createProductAttributeTerm = async (attributeId: number, termData: Partial<ProductAttributeTerm>) => {
+  try {
+    const response = await wcApiClient.post<ProductAttributeTerm>(`/products/attributes/${attributeId}/terms`, termData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating attribute term:", error);
+    throw error;
   }
 };
