@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { testApiConnection, saveApiCredentials, getStockwaveSettings, ApiCredentials } from "@/services/settingsService";
-import { Save, TestTube, AlertCircle } from "lucide-react";
+import { Save, TestTube, AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Settings = () => {
   const queryClient = useQueryClient();
-  const [wpUsername, setWpUsername] = useState("Sithethao");
-  const [wpPassword, setWpPassword] = useState("Seco2025@");
+  const [wpUsername, setWpUsername] = useState("Admin.hcm.sithethao");
+  const [wpPassword, setWpPassword] = useState("LDUe HXkt Le1k ZmJT tkmL OVHs");
   const [consumerKey, setConsumerKey] = useState("ck_7935a07888db15201ea09300934d277d69064c33");
   const [consumerSecret, setConsumerSecret] = useState("cs_27bd2111e8402f827a7261707125929171061a2d");
   const [testResult, setTestResult] = useState<{success?: boolean; message?: string}>({});
@@ -24,7 +23,7 @@ const Settings = () => {
     const loadSettings = async () => {
       const result = await getStockwaveSettings();
       if (result.success && result.data) {
-        setWpUsername(result.data.wpUsername || "Admin");
+        setWpUsername(result.data.wpUsername || "Admin.hcm.sithethao");
         setWpPassword(result.data.wpPassword || "");
         setConsumerKey(result.data.consumerKey || "");
         setConsumerSecret(result.data.consumerSecret || "");
@@ -96,6 +95,13 @@ const Settings = () => {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <h3 className="font-medium">WordPress REST API</h3>
+            <Alert className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Mật khẩu ứng dụng</AlertTitle>
+              <AlertDescription>
+                Sử dụng mật khẩu ứng dụng (Application Password) thay vì mật khẩu tài khoản chính để tăng cường bảo mật.
+              </AlertDescription>
+            </Alert>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="wpUsername">Tên người dùng</Label>
@@ -106,7 +112,7 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="wpPassword">Mật khẩu</Label>
+                <Label htmlFor="wpPassword">Mật khẩu ứng dụng</Label>
                 <Input
                   id="wpPassword"
                   type="password"
