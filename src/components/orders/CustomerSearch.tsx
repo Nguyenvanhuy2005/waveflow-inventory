@@ -22,11 +22,13 @@ export function CustomerSearch({ onSelectCustomer, selectedCustomer }: CustomerS
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
 
-  const { data: customers, isPending } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ["customers-search", searchTerm],
     queryFn: () => getCustomers({ search: searchTerm, per_page: 5 }),
     enabled: searchTerm.length > 2 && open,
   });
+  
+  const customers = data?.customers || [];
 
   // Close popover when customer is selected
   useEffect(() => {

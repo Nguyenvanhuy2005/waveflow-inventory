@@ -1,7 +1,8 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { getCustomers, type CustomersResponse } from "@/services/customerService";
+import { getCustomers, type CustomersResponse, type Customer } from "@/services/customerService";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/DataTable";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, CalendarIcon, User2 } from "lucide-react";
 import { getRelativeTimeString } from "@/lib/format";
-import { type Customer } from "@/services/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { getCellContent } from "@/components/table/TableCellHelpers";
 
