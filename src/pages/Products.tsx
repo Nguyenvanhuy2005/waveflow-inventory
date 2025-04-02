@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ColumnDef } from "@tanstack/react-table";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useState<ProductSearchParams>({
@@ -36,6 +37,99 @@ const Products = () => {
     }));
   };
 
+  // Define columns with proper typing
+  const columns: ColumnDef<any, any>[] = [
+    {
+      header: "",
+      id: "expand",
+      cell: ({ row }) => {
+        const product = row.original;
+        // Only show expand button for variable products
+        if (product.type !== 'variable' || !product.variations || product.variations.length === 0) {
+          return null;
+        }
+        
+        const isExpanded = expandedProducts[product.id] || false;
+        
+        return (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleProductExpansion(product.id);
+            }}
+          >
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        );
+      },
+    },
+    {
+      header: "ID",
+      accessorKey: "id",
+    },
+    {
+      header: "Tên",
+      accessorKey: "name",
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            {product.images && product.images[0] ? (
+              <img 
+                src={product.images[0].src} 
+                alt={product.name} 
+                className="w-10 h-10 object-cover rounded-md"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gray-200 rounded-md" />
+            )}
+            <span className="font-medium">{product.name}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: "SKU",
+      accessorKey: "sku",
+    },
+    {
+      header: "Giá",
+      accessorKey: "price",
+      cell: ({ row }) => formatCurrency(parseFloat(row.original.price || "0")),
+    },
+    {
+      header: "Tồn kho",
+      accessorKey: "stock_quantity",
+      cell: ({ row }) => {
+        const product = row.original;
+        if (!product.manage_stock) return "N/A";
+        if (product.stock_quantity === null) return "N/A";
+        
+        // Display warning if stock is low
+        if (product.stock_quantity <= 5) {
+          return (
+            <span className="text-red-600 font-semibold">
+              {product.stock_quantity}
+            </span>
+          );
+        }
+        
+        return product.stock_quantity;
+      },
+    },
+    {
+      header: "Trạng thái",
+      accessorKey: "status",
+      cell: ({ row }) => <StatusBadge status={row.original.status} type="product" />,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -43,92 +137,7 @@ const Products = () => {
       </div>
 
       <DataTable
-        columns={[
-          {
-            header: "",
-            id: "expand",
-            cell: (row) => {
-              // Only show expand button for variable products
-              if (row.type !== 'variable' || !row.variations || row.variations.length === 0) {
-                return null;
-              }
-              
-              const isExpanded = expandedProducts[row.id] || false;
-              
-              return (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleProductExpansion(row.id);
-                  }}
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              );
-            },
-          },
-          {
-            header: "ID",
-            accessorKey: "id",
-          },
-          {
-            header: "Tên",
-            accessorKey: "name",
-            cell: (row) => (
-              <div className="flex items-center gap-3">
-                {row.images && row.images[0] ? (
-                  <img 
-                    src={row.images[0].src} 
-                    alt={row.name} 
-                    className="w-10 h-10 object-cover rounded-md"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-gray-200 rounded-md" />
-                )}
-                <span className="font-medium">{row.name}</span>
-              </div>
-            ),
-          },
-          {
-            header: "SKU",
-            accessorKey: "sku",
-          },
-          {
-            header: "Giá",
-            accessorKey: "price",
-            cell: (row) => formatCurrency(parseFloat(row.price || "0")),
-          },
-          {
-            header: "Tồn kho",
-            accessorKey: "stock_quantity",
-            cell: (row) => {
-              if (!row.manage_stock) return "N/A";
-              if (row.stock_quantity === null) return "N/A";
-              
-              // Display warning if stock is low
-              if (row.stock_quantity <= 5) {
-                return (
-                  <span className="text-red-600 font-semibold">
-                    {row.stock_quantity}
-                  </span>
-                );
-              }
-              
-              return row.stock_quantity;
-            },
-          },
-          {
-            header: "Trạng thái",
-            accessorKey: "status",
-            cell: (row) => <StatusBadge status={row.status} type="product" />,
-          },
-        ]}
+        columns={columns}
         data={data || []}
         searchPlaceholder="Tìm kiếm sản phẩm..."
         onSearch={handleSearch}

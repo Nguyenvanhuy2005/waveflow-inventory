@@ -1,12 +1,12 @@
+
 import React, { useDeferredValue, useState } from "react";
 import {
-  Column,
-  ColumnDef,
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
-  Row,
+  type ColumnDef,
+  type Row,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -226,3 +226,4 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
+
