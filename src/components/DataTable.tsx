@@ -7,6 +7,7 @@ import {
   useReactTable,
   type ColumnDef,
   type Row,
+  type CellContext,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -152,7 +153,7 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                   {getRowCanExpand && 
                    getRowCanExpand(row.original) && 
-                   isRowExpanded(row.original?.id) && 
+                   isRowExpanded(row.id) && 
                    renderSubComponent && (
                     <TableRow>
                       <TableCell colSpan={columns.length} className="p-0">
@@ -226,4 +227,3 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
-
