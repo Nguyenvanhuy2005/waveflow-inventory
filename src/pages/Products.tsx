@@ -1,16 +1,13 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { getProducts, ProductSearchParams } from "@/services/productService";
 import { DataTable } from "@/components/DataTable";
 import { formatCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
 const Products = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState<ProductSearchParams>({
     per_page: 10,
     page: 1,
@@ -33,13 +30,14 @@ const Products = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Sản phẩm</h1>
-        <Button onClick={() => navigate("/products/new")}>
-          <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
-        </Button>
       </div>
 
       <DataTable
         columns={[
+          {
+            header: "ID",
+            accessorKey: "id",
+          },
           {
             header: "Tên",
             accessorKey: "name",
