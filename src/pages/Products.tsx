@@ -144,7 +144,7 @@ const Products = () => {
         isPending={isPending}
         pagination={{
           pageIndex: searchParams.page ? searchParams.page - 1 : 0,
-          pageSize: 10, // Add pageSize parameter to fix the pagination error
+          pageSize: searchParams.per_page || 10,
           pageCount: 10, // Hardcoded for now, would ideally come from API
           onPageChange: handlePageChange,
         }}

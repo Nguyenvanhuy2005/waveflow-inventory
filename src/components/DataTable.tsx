@@ -7,7 +7,6 @@ import {
   useReactTable,
   type ColumnDef,
   type Row,
-  type CellContext,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -36,6 +35,7 @@ interface DataTableProps<TData, TValue> {
   isPending?: boolean;
   pagination?: {
     pageIndex: number;
+    pageSize: number;
     pageCount: number;
     onPageChange: (page: number) => void;
   };
@@ -70,7 +70,7 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     state: {
       pagination: pagination
-        ? { pageIndex: pagination.pageIndex, pageSize: 10 }
+        ? { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }
         : undefined,
     },
     manualPagination: !!pagination,
