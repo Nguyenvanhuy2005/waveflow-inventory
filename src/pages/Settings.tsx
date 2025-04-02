@@ -12,10 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Settings = () => {
   const queryClient = useQueryClient();
-  const [wpUsername, setWpUsername] = useState("sithethao");
-  const [wpPassword, setWpPassword] = useState("LDUe HXkt Le1k ZmJT tkmL OVHs");
-  const [consumerKey, setConsumerKey] = useState("ck_7935a07888db15201ea09300934d277d69064c33");
-  const [consumerSecret, setConsumerSecret] = useState("cs_27bd2111e8402f827a7261707125929171061a2d");
+  const [wpUsername, setWpUsername] = useState("Sithethao");
+  const [wpPassword, setWpPassword] = useState("1EkS dNpW ev2v LUtV GNju jBW1");
+  const [consumerKey, setConsumerKey] = useState("ck_1cf1c571b5962ef86eaea8d7f7539c8155c91d03");
+  const [consumerSecret, setConsumerSecret] = useState("cs_429beae5ef82dd3e4a88fd308decc0543388db66");
   const [testResult, setTestResult] = useState<{success?: boolean; message?: string}>({});
   const [isCredentialsChanged, setIsCredentialsChanged] = useState(false);
 

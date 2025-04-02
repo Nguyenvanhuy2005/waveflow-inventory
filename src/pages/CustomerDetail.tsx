@@ -386,6 +386,7 @@ const CustomerDetail = () => {
                   id="first_name"
                   name="first_name"
                   onChange={handleInputChange}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -394,6 +395,7 @@ const CustomerDetail = () => {
                   id="last_name"
                   name="last_name"
                   onChange={handleInputChange}
+                  required
                 />
               </div>
             </div>
@@ -404,6 +406,7 @@ const CustomerDetail = () => {
                 name="email"
                 type="email"
                 onChange={handleInputChange}
+                required
               />
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -421,6 +424,7 @@ const CustomerDetail = () => {
                   id="username"
                   name="username"
                   onChange={handleInputChange}
+                  required
                 />
               </div>
             </div>
@@ -431,7 +435,98 @@ const CustomerDetail = () => {
                 name="password"
                 type="password"
                 onChange={handleInputChange}
+                required
               />
+            </div>
+
+            <div className="pt-4 border-t">
+              <h3 className="text-lg font-semibold mb-4">Địa chỉ khách hàng</h3>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="billing.first_name">Tên (hóa đơn)</Label>
+                    <Input
+                      id="billing.first_name"
+                      name="billing.first_name"
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="billing.last_name">Họ (hóa đơn)</Label>
+                    <Input
+                      id="billing.last_name"
+                      name="billing.last_name"
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="billing.address_1">Địa chỉ</Label>
+                  <Input
+                    id="billing.address_1"
+                    name="billing.address_1"
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="billing.city">Thành phố</Label>
+                    <Input
+                      id="billing.city"
+                      name="billing.city"
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="billing.state">Tỉnh/Thành</Label>
+                    <Input
+                      id="billing.state"
+                      name="billing.state"
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="billing.postcode">Mã bưu điện</Label>
+                    <Input
+                      id="billing.postcode"
+                      name="billing.postcode"
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="billing.country">Quốc gia</Label>
+                  <Input
+                    id="billing.country"
+                    name="billing.country"
+                    onChange={handleInputChange}
+                    placeholder="VN"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="billing.email">Email (hóa đơn)</Label>
+                  <Input
+                    id="billing.email"
+                    name="billing.email"
+                    type="email"
+                    onChange={handleInputChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="billing.company">Công ty (nếu có)</Label>
+                  <Input
+                    id="billing.company"
+                    name="billing.company"
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

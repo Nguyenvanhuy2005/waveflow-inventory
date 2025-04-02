@@ -1,155 +1,226 @@
-
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import React, { useDeferredValue, useState } from "react";
+import {
+  Column,
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  Row,
+} from "@tanstack/react-table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Search,
+  Loader2,
+} from "lucide-react";
 
-interface Column<T> {
-  header: string;
-  accessorKey: string;
-  cell?: (row: T) => React.ReactNode;
-}
-
-interface DataTableProps<T> {
-  columns: Column<T>[];
-  data: T[];
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
   searchPlaceholder?: string;
-  onSearch?: (query: string) => void;
+  onSearch?: (value: string) => void;
   isPending?: boolean;
   pagination?: {
     pageIndex: number;
     pageCount: number;
     onPageChange: (page: number) => void;
   };
+  renderSubComponent?: (row: Row<TData>) => React.ReactNode;
+  getRowCanExpand?: (row: TData) => boolean;
+  expandedRows?: Record<string | number, boolean>;
 }
 
-export function DataTable<T>({
+export function DataTable<TData, TValue>({
   columns,
   data,
-  searchPlaceholder = "Tìm kiếm...",
+  searchPlaceholder = "Search...",
   onSearch,
   isPending = false,
   pagination,
-}: DataTableProps<T>) {
-  const [searchQuery, setSearchQuery] = useState("");
+  renderSubComponent,
+  getRowCanExpand,
+  expandedRows,
+}: DataTableProps<TData, TValue>) {
+  const [searchValue, setSearchValue] = useState("");
+  const deferredSearchValue = useDeferredValue(searchValue);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
+  // Memoize columns if we're using expandable rows
+  const columnsMemo = React.useMemo(() => {
+    return columns;
+  }, [columns]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const table = useReactTable({
+    data,
+    columns: columnsMemo,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      pagination: pagination
+        ? { pageIndex: pagination.pageIndex, pageSize: 10 }
+        : undefined,
+    },
+    manualPagination: !!pagination,
+    pageCount: pagination?.pageCount || -1,
+  });
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchValue(value);
+
     if (onSearch) {
-      onSearch(searchQuery);
+      // Using a timeout to avoid too many API calls while typing
+      const timeoutId = setTimeout(() => {
+        if (value === deferredSearchValue) {
+          onSearch(value);
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
   };
 
-  // Helper function to safely access object properties by path
-  const getNestedValue = (obj: any, path: string) => {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  const isRowExpanded = (rowId: string | number): boolean => {
+    return expandedRows ? !!expandedRows[rowId] : false;
   };
 
   return (
     <div className="space-y-4">
       {onSearch && (
-        <form onSubmit={handleSearchSubmit} className="flex gap-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="max-w-sm"
+            className="pl-8"
+            value={searchValue}
+            onChange={handleSearch}
           />
-          <Button type="submit" variant="outline" size="icon">
-            <Search className="h-4 w-4" />
-            <span className="sr-only">Tìm kiếm</span>
-          </Button>
-        </form>
+        </div>
       )}
-
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.accessorKey}>{column.header}</TableHead>
-              ))}
-            </TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
           </TableHeader>
           <TableBody>
             {isPending ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center py-10">
-                  <div className="flex justify-center items-center">
-                    <svg
-                      className="animate-spin h-5 w-5 text-primary"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span>Loading...</span>
                   </div>
                 </TableCell>
               </TableRow>
-            ) : data.length === 0 ? (
+            ) : table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <React.Fragment key={row.id}>
+                  <TableRow>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {getRowCanExpand && 
+                   getRowCanExpand(row.original) && 
+                   isRowExpanded(row.original?.id) && 
+                   renderSubComponent && (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="p-0">
+                        {renderSubComponent(row)}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              ))
+            ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center py-10">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   Không có dữ liệu
                 </TableCell>
               </TableRow>
-            ) : (
-              data.map((row, rowIndex) => (
-                <TableRow key={rowIndex}>
-                  {columns.map((column) => (
-                    <TableCell key={`${rowIndex}-${column.accessorKey}`}>
-                      {column.cell
-                        ? column.cell(row)
-                        : getNestedValue(row, column.accessorKey)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
             )}
           </TableBody>
         </Table>
       </div>
 
-      {pagination && pagination.pageCount > 0 && (
-        <div className="flex items-center justify-center space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => pagination.onPageChange(pagination.pageIndex - 1)}
-            disabled={pagination.pageIndex === 0}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Trang trước</span>
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            Trang {pagination.pageIndex + 1} / {pagination.pageCount}
+      {pagination && (
+        <div className="flex items-center justify-end">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => pagination.onPageChange(0)}
+              disabled={pagination.pageIndex === 0 || isPending}
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => pagination.onPageChange(pagination.pageIndex - 1)}
+              disabled={pagination.pageIndex === 0 || isPending}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">
+              Trang {pagination.pageIndex + 1} / {pagination.pageCount || 1}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => pagination.onPageChange(pagination.pageIndex + 1)}
+              disabled={
+                pagination.pageIndex === pagination.pageCount - 1 || isPending
+              }
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                pagination.onPageChange(pagination.pageCount - 1)
+              }
+              disabled={
+                pagination.pageIndex === pagination.pageCount - 1 || isPending
+              }
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => pagination.onPageChange(pagination.pageIndex + 1)}
-            disabled={pagination.pageIndex >= pagination.pageCount - 1}
-          >
-            <ChevronRight className="h-4 w-4" />
-            <span className="sr-only">Trang tiếp theo</span>
-          </Button>
         </div>
       )}
     </div>
