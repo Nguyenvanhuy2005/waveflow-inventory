@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -265,6 +266,7 @@ const Users = () => {
         isPending={isPending}
         pagination={{
           pageIndex: searchParams.page ? searchParams.page - 1 : 0,
+          pageSize: searchParams.per_page || 10, // Add the missing pageSize property using the per_page value from searchParams
           pageCount: 10, // Hardcoded for now, would ideally come from API
           onPageChange: handlePageChange,
         }}

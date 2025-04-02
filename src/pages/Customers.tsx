@@ -118,6 +118,7 @@ export default function Customers() {
             isPending={isPending}
             pagination={{
               pageIndex: page - 1,
+              pageSize: 10, // Add the missing pageSize property
               pageCount: totalPages,
               onPageChange: (pageIndex) => setPage(pageIndex + 1),
             }}
