@@ -7,7 +7,6 @@ import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { getCellContent } from "@/components/table/TableCellHelpers";
 
 const Orders = () => {
@@ -33,11 +32,6 @@ const Orders = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Đơn hàng</h1>
-        <Button asChild>
-          <Link to="/orders/new">
-            <Plus className="mr-2 h-4 w-4" /> Tạo đơn hàng
-          </Link>
-        </Button>
       </div>
 
       <DataTable
@@ -97,7 +91,7 @@ const Orders = () => {
         isPending={isPending}
         pagination={{
           pageIndex: searchParams.page ? searchParams.page - 1 : 0,
-          pageSize: searchParams.per_page || 10, // Add the missing pageSize property using the per_page value from searchParams
+          pageSize: searchParams.per_page || 10,
           pageCount: 10, // Hardcoded for now, would ideally come from API
           onPageChange: handlePageChange,
         }}
