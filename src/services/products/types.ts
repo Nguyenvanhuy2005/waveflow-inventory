@@ -173,4 +173,5 @@ export interface ProductSearchParams {
   status?: string;
   per_page?: number;
   page?: number;
+  sku?: string;  // Added the sku property to fix the TypeScript error
 }
