@@ -37,7 +37,11 @@ export const getProductWithVariations = async (productId: number, searchTerm?: s
         console.log(`Found ${filteredVariations.length} matching variations`);
       }
       
-      return { ...product, variationsData: filteredVariations };
+      // Return product with variations using a consistent property name
+      return { 
+        ...product, 
+        variationsDetails: filteredVariations 
+      };
     }
     
     return product;

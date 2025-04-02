@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts, getProductWithVariations } from "@/services/productService";
@@ -18,7 +17,7 @@ interface ProductSearchProps {
 }
 
 interface ProductWithVariations extends Product {
-  variationsData?: ProductVariation[];
+  variationsDetails?: ProductVariation[];
 }
 
 export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
@@ -43,21 +42,8 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
       
       // Filter variations based on search term if provided
       let variations: ProductVariation[] = [];
-      if (productWithVariations.variationsData) {
-        variations = productWithVariations.variationsData.filter(variation => {
-          // If no search term, show all variations
-          if (searchTerm.length <= 2) return true;
-          
-          // Search in variation attributes
-          const attributeMatch = variation.attributes.some(attr => 
-            attr.option.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          
-          // Search in SKU
-          const skuMatch = variation.sku?.toLowerCase().includes(searchTerm.toLowerCase());
-          
-          return attributeMatch || skuMatch;
-        });
+      if (productWithVariations.variationsDetails) {
+        variations = productWithVariations.variationsDetails;
       }
       
       // Store the filtered variations in state
