@@ -1,4 +1,3 @@
-
 import { wcApiClient } from "./apiConfig";
 
 export interface Customer {
@@ -43,6 +42,7 @@ export interface Customer {
     key: string;
     value: any;
   }[];
+  orders_count?: number;
 }
 
 export interface CustomerSearchParams {
@@ -52,9 +52,21 @@ export interface CustomerSearchParams {
   page?: number;
 }
 
-export const getCustomers = async (params?: CustomerSearchParams) => {
+export interface CustomersResponse {
+  customers: Customer[];
+  totalPages: number;
+}
+
+export const getCustomers = async (params?: CustomerSearchParams): Promise<CustomersResponse> => {
   const response = await wcApiClient.get<Customer[]>("/customers", { params });
-  return response.data;
+  
+  // Extract pagination information from headers if available
+  const totalPages = parseInt(response.headers['x-wp-totalpages'] || '1');
+  
+  return {
+    customers: response.data,
+    totalPages: totalPages
+  };
 };
 
 export const getCustomer = async (id: number) => {

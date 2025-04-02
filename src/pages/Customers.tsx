@@ -1,8 +1,7 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { getCustomers } from "@/services/customerService";
+import { getCustomers, type CustomersResponse } from "@/services/customerService";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/DataTable";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,11 +12,6 @@ import { getRelativeTimeString } from "@/lib/format";
 import { type Customer } from "@/services/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { getCellContent } from "@/components/table/TableCellHelpers";
-
-interface CustomersResponse {
-  customers: Customer[];
-  totalPages: number;
-}
 
 export default function Customers() {
   const [page, setPage] = useState(1);
