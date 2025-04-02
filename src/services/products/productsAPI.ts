@@ -14,10 +14,47 @@ import {
 // Main product CRUD operations
 export const getProducts = async (params?: ProductSearchParams) => {
   try {
-    const defaultParams = { per_page: 20, ...params };
+    // Check if the search term might be a product ID
+    if (params?.search && !isNaN(Number(params.search))) {
+      console.log(`Search term looks like an ID: ${params.search}`);
+      try {
+        // Try to fetch the specific product by ID
+        const product = await getProduct(Number(params.search));
+        return [product]; // Return as array for consistency
+      } catch (error) {
+        console.log(`No product found with ID ${params.search}, continuing with regular search`);
+        // If no product found by ID, continue with regular search
+      }
+    }
+    
+    // Check if search is a SKU - need to modify params for SKU search
+    const searchParams = { ...params };
+    if (params?.search && params.search.length > 0) {
+      if (params.search.toUpperCase().startsWith('SC') || 
+          /^[A-Z0-9-_]+$/.test(params.search.toUpperCase())) {
+        console.log(`Search term looks like a SKU: ${params.search}`);
+        // WooCommerce doesn't have a direct SKU filter in the products endpoint
+        // We'll add it as a parameter and handle in a filter below
+        searchParams.sku = params.search;
+      }
+    }
+
+    const defaultParams = { per_page: 20, ...searchParams };
     const response = await wcApiClient.get<Product[]>("/products", { params: defaultParams });
-    console.log(`Fetched ${response.data.length} products`);
-    return response.data;
+    
+    let products = response.data;
+    
+    // If we're searching for a SKU, filter results client-side
+    if (searchParams.sku) {
+      products = products.filter(product => 
+        product.sku?.toLowerCase().includes(searchParams.sku!.toLowerCase())
+      );
+      
+      console.log(`Filtered to ${products.length} products matching SKU: ${searchParams.sku}`);
+    }
+    
+    console.log(`Fetched ${products.length} products`);
+    return products;
   } catch (error) {
     console.error("Error fetching products:", error);
     throw error;

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts, getProductWithVariations } from "@/services/productService";
@@ -29,7 +30,7 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
   const { data: products = [], isPending } = useQuery({
     queryKey: ["products-search", searchTerm],
     queryFn: () => getProducts({ search: searchTerm, per_page: 10 }),
-    enabled: searchTerm.length > 2 && open,
+    enabled: searchTerm.length > 1 && open, // Changed from 2 to 1 to allow ID searches
   });
 
   // Function to load and filter product variations
@@ -38,7 +39,7 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
       setLoadingVariations(prev => ({ ...prev, [productId]: true }));
       
       // Use the getProductWithVariations utility to fetch the product with variations
-      const productWithVariations = await getProductWithVariations(productId);
+      const productWithVariations = await getProductWithVariations(productId, searchTerm);
       
       // Filter variations based on search term if provided
       let variations: ProductVariation[] = [];
@@ -117,13 +118,18 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
     }
   };
 
+  // Helper function to display search guidance
+  const getSearchPlaceholder = () => {
+    return "Tìm kiếm theo tên, SKU hoặc ID...";
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Tìm kiếm sản phẩm..." 
+            placeholder={getSearchPlaceholder()} 
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -141,9 +147,12 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
             <div className="flex flex-col items-center justify-center p-4 text-center">
               <Package className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                {searchTerm.length > 2 
+                {searchTerm.length > 1 
                   ? "Không tìm thấy sản phẩm nào" 
-                  : "Nhập ít nhất 3 ký tự để tìm kiếm"}
+                  : "Nhập ít nhất 2 ký tự để tìm kiếm"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Có thể tìm bằng tên, mã SKU, hoặc ID sản phẩm
               </p>
             </div>
           ) : (
@@ -172,6 +181,8 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
                           {product.sku ? `SKU: ${product.sku}` : ""} 
                           {product.sku && product.price ? " | " : ""}
                           {product.price ? formatCurrency(parseFloat(product.price || "0")) : ""}
+                          {" "}
+                          <span className="text-xs text-gray-400">ID: {product.id}</span>
                         </p>
                       </div>
                     </div>
