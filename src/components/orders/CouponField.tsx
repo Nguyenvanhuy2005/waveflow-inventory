@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Loader2, Tag, Check, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getCouponByCode, Coupon } from "@/services/couponService";
+import { formatCurrency } from "@/lib/format";
 
 interface CouponFieldProps {
   onApplyCoupon: (coupon: Coupon | null) => void;
