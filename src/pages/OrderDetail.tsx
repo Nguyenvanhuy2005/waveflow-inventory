@@ -22,6 +22,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { CustomerSearch } from "@/components/orders/CustomerSearch";
 import { ProductSearch } from "@/components/orders/ProductSearch";
+import { CouponField } from "@/components/orders/CouponField";
+import { ShippingForm } from "@/components/orders/ShippingForm";
+import { Coupon } from "@/services/couponService";
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,11 +37,16 @@ const OrderDetail = () => {
     billing: {},
     shipping: {},
     line_items: [],
-    shipping_lines: [],
+    shipping_lines: [{
+      method_id: "flat_rate",
+      method_title: "Giao hàng tiêu chuẩn",
+      total: "30000"
+    }],
     status: "pending"
   });
   
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
   // Fetch existing order data if editing
   const { data: order, isPending } = useQuery({
@@ -69,11 +77,34 @@ const OrderDetail = () => {
     }
   }, [selectedCustomer]);
 
+  // Apply coupon to order
+  const handleApplyCoupon = (coupon: Coupon | null) => {
+    setAppliedCoupon(coupon);
+    
+    if (coupon) {
+      // Update coupon_lines in the order data
+      setOrderData((prev: any) => ({
+        ...prev,
+        coupon_lines: [{
+          id: coupon.id,
+          code: coupon.code,
+          discount: coupon.amount,
+          discount_type: coupon.discount_type
+        }]
+      }));
+    } else {
+      // Remove coupon lines if no coupon is applied
+      setOrderData((prev: any) => ({
+        ...prev,
+        coupon_lines: []
+      }));
+    }
+  };
+
   // Calculate totals
   const calculateTotals = () => {
     let subtotal = 0;
     let total = 0;
-    let tax = 0;
 
     if (orderData.line_items && orderData.line_items.length > 0) {
       orderData.line_items.forEach((item: any) => {
@@ -83,16 +114,25 @@ const OrderDetail = () => {
       // Add shipping
       const shipping = parseFloat(orderData.shipping_total || "0");
       
-      // Calculate tax (simple calculation for demo)
-      tax = subtotal * 0.1; // 10% tax
+      // Calculate discount
+      let discount = 0;
+      if (appliedCoupon) {
+        if (appliedCoupon.discount_type === 'percent') {
+          discount = subtotal * (parseFloat(appliedCoupon.amount) / 100);
+        } else {
+          discount = parseFloat(appliedCoupon.amount);
+        }
+      }
       
-      total = subtotal + shipping + tax;
+      total = subtotal + shipping - discount;
     }
 
     return {
       subtotal,
       shipping: parseFloat(orderData.shipping_total || "0"),
-      tax,
+      discount: appliedCoupon ? (appliedCoupon.discount_type === 'percent' ? 
+        subtotal * (parseFloat(appliedCoupon.amount) / 100) : 
+        parseFloat(appliedCoupon.amount)) : 0,
       total
     };
   };
@@ -134,6 +174,7 @@ const OrderDetail = () => {
   const addProductToOrder = (product: any) => {
     const newItem = {
       product_id: product.id,
+      variation_id: product.variation_id || 0,
       name: product.name,
       sku: product.sku || "",
       price: product.price || "0",
@@ -187,6 +228,33 @@ const OrderDetail = () => {
         ...prev[section],
         [key]: value
       }
+    }));
+  };
+
+  // Update shipping information
+  const updateShippingInfo = (shippingInfo: any) => {
+    setOrderData((prev: any) => ({
+      ...prev,
+      shipping: {
+        ...prev.shipping,
+        ...shippingInfo
+      }
+    }));
+  };
+
+  // Update shipping cost
+  const updateShippingCost = (cost: string) => {
+    setOrderData((prev: any) => ({
+      ...prev,
+      shipping_total: cost,
+      shipping_lines: [
+        {
+          method_id: "flat_rate",
+          method_title: cost === "0" ? "Miễn phí giao hàng" : 
+                       cost === "50000" ? "Giao hàng nhanh" : "Giao hàng tiêu chuẩn",
+          total: cost
+        }
+      ]
     }));
   };
 
@@ -362,8 +430,21 @@ const OrderDetail = () => {
           </CardContent>
         </Card>
         
+        {/* Shipping Information */}
+        {isNewOrder && (
+          <Card className="md:col-span-2">
+            <ShippingForm 
+              billing={orderData.billing} 
+              shipping={orderData.shipping}
+              shippingTotal={orderData.shipping_total || "0"}
+              onShippingUpdate={updateShippingInfo}
+              onShippingCostUpdate={updateShippingCost}
+            />
+          </Card>
+        )}
+        
         {/* Order Items */}
-        <Card className="md:col-span-2">
+        <Card className={`md:col-span-${isNewOrder ? '3' : '2'}`}>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Sản phẩm</CardTitle>
           </CardHeader>
@@ -387,7 +468,12 @@ const OrderDetail = () => {
                   {orderData.line_items?.length ? (
                     orderData.line_items.map((item: any, index: number) => (
                       <TableRow key={index}>
-                        <TableCell>{item.name}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p>{item.name}</p>
+                            {item.sku && <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>}
+                          </div>
+                        </TableCell>
                         <TableCell>{formatCurrency(parseFloat(item.price || "0"))}</TableCell>
                         <TableCell>
                           <Input
@@ -426,6 +512,14 @@ const OrderDetail = () => {
               </Table>
             </div>
 
+            {/* Apply coupon */}
+            {isNewOrder && (
+              <CouponField 
+                onApplyCoupon={handleApplyCoupon} 
+                appliedCoupon={appliedCoupon} 
+              />
+            )}
+
             {/* Totals */}
             <div className="border rounded-md p-4 space-y-2">
               <div className="flex justify-between items-center">
@@ -433,10 +527,12 @@ const OrderDetail = () => {
                 <span>{formatCurrency(totals.subtotal)}</span>
               </div>
               
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Thuế (10%):</span>
-                <span>{formatCurrency(totals.tax)}</span>
-              </div>
+              {totals.discount > 0 && (
+                <div className="flex justify-between items-center text-green-600">
+                  <span>Giảm giá:</span>
+                  <span>- {formatCurrency(totals.discount)}</span>
+                </div>
+              )}
               
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Phí giao hàng:</span>
