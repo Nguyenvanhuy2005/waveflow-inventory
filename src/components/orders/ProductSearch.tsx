@@ -41,13 +41,16 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
       // Use the getProductWithVariations utility to fetch the product with variations
       const productWithVariations = await getProductWithVariations(productId, searchTerm);
       
-      // Filter variations based on search term if provided
+      // Get variations from the response
       let variations: ProductVariation[] = [];
-      if (productWithVariations.variationsDetails) {
+      if (productWithVariations.variationsDetails && productWithVariations.variationsDetails.length > 0) {
         variations = productWithVariations.variationsDetails;
+        console.log(`Loaded ${variations.length} variations for product ${productId}`);
+      } else {
+        console.log(`No variations found for product ${productId}`);
       }
       
-      // Store the filtered variations in state
+      // Store the variations in state
       setExpandedProducts(prev => ({
         ...prev,
         [productId]: variations
@@ -65,9 +68,9 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
   // Format variation name
   const formatVariationName = (product: Product, variation: ProductVariation) => {
     // Format attributes
-    const attributesText = variation.attributes
-      .map(attr => attr.option)
-      .join(", ");
+    const attributesText = variation.attributes && variation.attributes.length > 0
+      ? variation.attributes.map(attr => attr.option).join(", ")
+      : "Biến thể mặc định";
     
     // Add SKU if available
     const skuText = variation.sku ? ` (${variation.sku})` : "";
@@ -118,6 +121,11 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
     }
   };
 
+  // Check if a product has variations without checking type
+  const hasVariations = (product: Product) => {
+    return product.variations && product.variations.length > 0;
+  };
+
   // Helper function to display search guidance
   const getSearchPlaceholder = () => {
     return "Tìm kiếm theo tên, SKU hoặc ID...";
@@ -161,7 +169,7 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
                 <div key={product.id} className="border-b last:border-0">
                   <div 
                     className="flex items-center justify-between gap-2 p-2 hover:bg-muted cursor-pointer rounded-md"
-                    onClick={product.type !== 'variable' ? () => handleSelectProduct(product) : () => toggleProductVariations(product)}
+                    onClick={!hasVariations(product) ? () => handleSelectProduct(product) : () => toggleProductVariations(product)}
                   >
                     <div className="flex items-center gap-2">
                       {product.images && product.images[0] ? (
@@ -186,7 +194,7 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
                         </p>
                       </div>
                     </div>
-                    {product.type !== 'variable' && (
+                    {!hasVariations(product) ? (
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -197,11 +205,11 @@ export function ProductSearch({ onSelectProduct }: ProductSearchProps) {
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                   
                   {/* Variations section */}
-                  {product.type === 'variable' && (
+                  {hasVariations(product) && (
                     <>
                       {loadingVariations[product.id] && (
                         <div className="ml-6 pl-4 border-l mb-2 py-2">

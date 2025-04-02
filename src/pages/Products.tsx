@@ -44,8 +44,8 @@ const Products = () => {
       id: "expand",
       cell: ({ row }) => {
         const product = row.original;
-        // Only show expand button for variable products
-        if (product.type !== 'variable' || !product.variations || product.variations.length === 0) {
+        // Show expand button for any product that has variations array, not just 'variable' type
+        if (!product.variations || product.variations.length === 0) {
           return null;
         }
         
@@ -144,6 +144,7 @@ const Products = () => {
         isPending={isPending}
         pagination={{
           pageIndex: searchParams.page ? searchParams.page - 1 : 0,
+          pageSize: 10, // Add pageSize parameter to fix the pagination error
           pageCount: 10, // Hardcoded for now, would ideally come from API
           onPageChange: handlePageChange,
         }}
@@ -151,7 +152,10 @@ const Products = () => {
           const product = row.original;
           return <ProductVariationsTable productId={product.id} />;
         }}
-        getRowCanExpand={(row) => row.type === 'variable' && row.variations && row.variations.length > 0}
+        getRowCanExpand={(row) => {
+          // Allow expansion for any product that has variations array
+          return row.variations && row.variations.length > 0;
+        }}
         expandedRows={expandedProducts}
       />
     </div>
@@ -163,6 +167,7 @@ const ProductVariationsTable = ({ productId }: { productId: number }) => {
   const { data: variations, isPending } = useQuery({
     queryKey: ["product-variations", productId],
     queryFn: () => getProductVariations(productId),
+    staleTime: 60000, // Cache for 1 minute
   });
 
   if (isPending) {

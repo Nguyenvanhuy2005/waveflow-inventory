@@ -14,8 +14,8 @@ export const getProductWithVariations = async (productId: number, searchTerm?: s
     // Get the main product
     const product = await getProduct(productId);
     
-    // If it's a variable product, load all variations
-    if (product.type === 'variable' && product.variations && product.variations.length > 0) {
+    // If product has variations, load them all regardless of product type
+    if (product.variations && product.variations.length > 0) {
       console.log(`Loading variations for product ${productId}`);
       const variations = await getProductVariations(productId);
       

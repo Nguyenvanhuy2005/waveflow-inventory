@@ -1,3 +1,4 @@
+
 import { wcApiClient } from "../apiConfig";
 import { 
   Product, 
@@ -66,8 +67,9 @@ export const getProduct = async (id: number) => {
     console.log(`Fetching product with ID ${id}`);
     const response = await wcApiClient.get<Product>(`/products/${id}`);
     
-    if (response.data.type === 'variable' && response.data.variations && response.data.variations.length > 0) {
-      console.log(`Product ${id} is variable with ${response.data.variations.length} variations`);
+    // Always check if product has variations regardless of type
+    if (response.data.variations && response.data.variations.length > 0) {
+      console.log(`Product ${id} has ${response.data.variations.length} variations`);
       const variationsDetails = await getProductVariations(id);
       response.data.variationsDetails = variationsDetails;
       console.log(`Loaded ${variationsDetails.length} variation details for product ${id}`);
