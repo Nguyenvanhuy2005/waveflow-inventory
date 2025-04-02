@@ -19,7 +19,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Order } from "@/services/orderService";
+import { Order } from "@/services/types";
+import { CellContext } from "@tanstack/react-table";
+import { getCellContent } from "@/components/table/TableCellHelpers";
 
 const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -331,26 +333,26 @@ const CustomerDetail = () => {
                         {
                           header: "Mã đơn hàng",
                           accessorKey: "number",
-                          cell: (row: Order) => (
+                          cell: (props) => (
                             <Link
-                              to={`/orders/${row.id}`}
+                              to={`/orders/${getCellContent(props, 'id')}`}
                               className="font-medium text-primary hover:underline"
                             >
-                              #{row.number}
+                              #{getCellContent(props, 'number')}
                             </Link>
                           ),
                         },
                         {
                           header: "Ngày tạo",
                           accessorKey: "date_created",
-                          cell: (row: Order) => formatDate(row.date_created),
+                          cell: (props) => formatDate(getCellContent(props, 'date_created')),
                         },
                         {
                           header: "Trạng thái",
                           accessorKey: "status",
-                          cell: (row: Order) => (
+                          cell: (props) => (
                             <StatusBadge
-                              status={row.status}
+                              status={getCellContent(props, 'status')}
                               type="order"
                             />
                           ),
@@ -358,8 +360,8 @@ const CustomerDetail = () => {
                         {
                           header: "Tổng tiền",
                           accessorKey: "total",
-                          cell: (row: Order) =>
-                            formatCurrency(parseFloat(row.total || "0")),
+                          cell: (props) => 
+                            formatCurrency(parseFloat(getCellContent(props, 'total') || "0")),
                         },
                       ]}
                       data={customerOrders || []}

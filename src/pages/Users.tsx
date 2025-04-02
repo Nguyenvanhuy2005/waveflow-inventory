@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { getStoredCredentials } from "@/services/apiConfig";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getCellContent } from "@/components/table/TableCellHelpers";
 
 const Users = () => {
   const [searchParams, setSearchParams] = useState<UserSearchParams>({
@@ -164,88 +165,103 @@ const Users = () => {
           {
             header: "Tên",
             accessorKey: "name",
-            cell: (row) => (
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={row.avatar_urls?.[96]} />
-                  <AvatarFallback>
-                    {row.name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <Link
-                    to={`/users/${row.id}`}
-                    className="font-medium hover:underline text-primary"
-                  >
-                    {row.name}
-                  </Link>
-                  <div className="text-sm text-muted-foreground">
-                    {row.email}
+            cell: (props) => {
+              const avatarUrls = getCellContent(props, 'avatar_urls');
+              const name = getCellContent(props, 'name');
+              const id = getCellContent(props, 'id');
+              const email = getCellContent(props, 'email');
+              
+              return (
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={avatarUrls?.[96]} />
+                    <AvatarFallback>
+                      {name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <Link
+                      to={`/users/${id}`}
+                      className="font-medium hover:underline text-primary"
+                    >
+                      {name}
+                    </Link>
+                    <div className="text-sm text-muted-foreground">
+                      {email}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ),
+              );
+            },
           },
           {
             header: "Tên đăng nhập",
             accessorKey: "slug",
+            cell: (props) => getCellContent(props, 'slug'),
           },
           {
             header: "Email",
             accessorKey: "email",
+            cell: (props) => getCellContent(props, 'email'),
           },
           {
             header: "Vai trò",
             accessorKey: "roles",
-            cell: (row) => (
-              <div>
-                {row.roles?.map((role: string) => {
-                  let roleName = role;
-                  switch (role) {
-                    case "administrator":
-                      roleName = "Quản trị viên";
-                      break;
-                    case "editor":
-                      roleName = "Biên tập viên";
-                      break;
-                    case "author":
-                      roleName = "Tác giả";
-                      break;
-                    case "contributor":
-                      roleName = "Cộng tác viên";
-                      break;
-                    case "subscriber":
-                      roleName = "Người đăng ký";
-                      break;
-                    case "customer":
-                      roleName = "Khách hàng";
-                      break;
-                    case "shop_manager":
-                      roleName = "Quản lý cửa hàng";
-                      break;
-                    default:
-                      break;
-                  }
-                  return roleName;
-                })}
-              </div>
-            ),
+            cell: (props) => {
+              const roles = getCellContent(props, 'roles');
+              return (
+                <div>
+                  {roles?.map((role: string) => {
+                    let roleName = role;
+                    switch (role) {
+                      case "administrator":
+                        roleName = "Quản trị viên";
+                        break;
+                      case "editor":
+                        roleName = "Biên tập viên";
+                        break;
+                      case "author":
+                        roleName = "Tác giả";
+                        break;
+                      case "contributor":
+                        roleName = "Cộng tác viên";
+                        break;
+                      case "subscriber":
+                        roleName = "Người đăng ký";
+                        break;
+                      case "customer":
+                        roleName = "Khách hàng";
+                        break;
+                      case "shop_manager":
+                        roleName = "Quản lý cửa hàng";
+                        break;
+                      default:
+                        break;
+                    }
+                    return roleName;
+                  })}
+                </div>
+              );
+            },
           },
           {
             header: "Thao tác",
             accessorKey: "id",
-            cell: (row) => (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/users/${row.id}`}>Chi tiết</Link>
-                </Button>
-              </div>
-            ),
+            cell: (props) => {
+              const id = getCellContent(props, 'id');
+              return (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/users/${id}`}>Chi tiết</Link>
+                  </Button>
+                </div>
+              );
+            },
           },
         ]}
         data={data || []}
         searchPlaceholder="Tìm kiếm người dùng..."
-        onSearch={handleSearch}
+        onSearch={(query) => handleSearch(query)}
         isPending={isPending}
         pagination={{
           pageIndex: searchParams.page ? searchParams.page - 1 : 0,

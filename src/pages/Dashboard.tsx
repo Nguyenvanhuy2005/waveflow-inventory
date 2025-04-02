@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardData } from "../services/dashboardService";
 import { StatsCard } from "../components/StatsCard";
@@ -19,6 +18,7 @@ import {
   Tooltip
 } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getCellContent } from "@/components/table/TableCellHelpers";
 
 const Dashboard = () => {
   const { data, isPending, error, refetch } = useQuery({
@@ -57,7 +57,6 @@ const Dashboard = () => {
     );
   }
 
-  // Đảm bảo dữ liệu đầy đủ để tránh lỗi
   const dashboardData = {
     totalOrders: data?.totalOrders || 0,
     totalRevenue: data?.totalRevenue || 0,
@@ -192,35 +191,38 @@ const Dashboard = () => {
                   {
                     header: "Mã đơn hàng",
                     accessorKey: "number",
-                    cell: (row) => (
-                      <Link to={`/orders/${row.id}`} className="font-medium text-primary hover:underline">
-                        #{row.number}
+                    cell: (props) => (
+                      <Link to={`/orders/${getCellContent(props, 'id')}`} className="font-medium text-primary hover:underline">
+                        #{getCellContent(props, 'number')}
                       </Link>
                     ),
                   },
                   {
                     header: "Khách hàng",
                     accessorKey: "billing.first_name",
-                    cell: (row) => (
-                      <div>
-                        {row.billing?.first_name} {row.billing?.last_name}
-                      </div>
-                    ),
+                    cell: (props) => {
+                      const billing = getCellContent(props, 'billing');
+                      return (
+                        <div>
+                          {billing?.first_name} {billing?.last_name}
+                        </div>
+                      );
+                    },
                   },
                   {
                     header: "Trạng thái",
                     accessorKey: "status",
-                    cell: (row) => <StatusBadge status={row.status} type="order" />,
+                    cell: (props) => <StatusBadge status={getCellContent(props, 'status')} type="order" />,
                   },
                   {
                     header: "Ngày tạo",
                     accessorKey: "date_created",
-                    cell: (row) => formatDate(row.date_created),
+                    cell: (props) => formatDate(getCellContent(props, 'date_created')),
                   },
                   {
                     header: "Tổng tiền",
                     accessorKey: "total",
-                    cell: (row) => formatCurrency(parseFloat(row.total)),
+                    cell: (props) => formatCurrency(parseFloat(getCellContent(props, 'total') || '0')),
                   },
                 ]}
                 data={dashboardData.recentOrders}
