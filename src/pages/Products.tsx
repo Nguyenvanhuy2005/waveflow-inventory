@@ -5,9 +5,17 @@ import { getProducts, ProductSearchParams, getProductVariations } from "@/servic
 import { DataTable } from "@/components/DataTable";
 import { formatCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Link } from "react-router-dom";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useState<ProductSearchParams>({
@@ -44,8 +52,10 @@ const Products = () => {
       id: "expand",
       cell: ({ row }) => {
         const product = row.original;
-        // Show expand button for any product that has variations array, not just 'variable' type
-        if (!product.variations || product.variations.length === 0) {
+        // Determine if product has variations that can be expanded
+        const hasVariations = product.variations && product.variations.length > 0;
+        
+        if (!hasVariations) {
           return null;
         }
         
@@ -128,18 +138,60 @@ const Products = () => {
       accessorKey: "status",
       cell: ({ row }) => <StatusBadge status={row.original.status} type="product" />,
     },
+    {
+      header: "Thao tác",
+      id: "actions",
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to={`/products/${product.id}`}>
+                  Xem chi tiết
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to={`/products/${product.id}/edit`}>
+                  Chỉnh sửa
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => {
+                  toast.info(`Chức năng xóa sản phẩm ${product.id} đang phát triển`);
+                }}
+              >
+                Xóa sản phẩm
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Sản phẩm</h1>
+        <Button asChild>
+          <Link to="/products/new">
+            Thêm sản phẩm mới
+          </Link>
+        </Button>
       </div>
 
       <DataTable
         columns={columns}
         data={data || []}
-        searchPlaceholder="Tìm kiếm sản phẩm..."
+        searchPlaceholder="Tìm kiếm sản phẩm theo tên, SKU..."
         onSearch={handleSearch}
         isPending={isPending}
         pagination={{
@@ -189,6 +241,7 @@ const ProductVariationsTable = ({ productId }: { productId: number }) => {
             <th className="px-2 py-1 text-left">Giá</th>
             <th className="px-2 py-1 text-left">Giá KM</th>
             <th className="px-2 py-1 text-left">Tồn kho</th>
+            <th className="px-2 py-1 text-left">Hình ảnh</th>
           </tr>
         </thead>
         <tbody>
@@ -201,7 +254,7 @@ const ProductVariationsTable = ({ productId }: { productId: number }) => {
                   </div>
                 ))}
               </td>
-              <td className="px-2 py-2">{variation.sku}</td>
+              <td className="px-2 py-2">{variation.sku || "-"}</td>
               <td className="px-2 py-2">{formatCurrency(parseFloat(variation.regular_price || "0"))}</td>
               <td className="px-2 py-2">{variation.sale_price ? formatCurrency(parseFloat(variation.sale_price || "0")) : "-"}</td>
               <td className="px-2 py-2">
@@ -210,6 +263,17 @@ const ProductVariationsTable = ({ productId }: { productId: number }) => {
                     <span className="text-red-600 font-semibold">{variation.stock_quantity}</span> : 
                     variation.stock_quantity 
                   : "N/A"}
+              </td>
+              <td className="px-2 py-2">
+                {variation.image && variation.image.src ? (
+                  <img 
+                    src={variation.image.src} 
+                    alt="Ảnh biến thể" 
+                    className="w-8 h-8 rounded object-cover"
+                  />
+                ) : (
+                  <span className="text-muted-foreground">Không có ảnh</span>
+                )}
               </td>
             </tr>
           ))}
