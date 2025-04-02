@@ -14,11 +14,16 @@ import { type Customer } from "@/services/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { getCellContent } from "@/components/table/TableCellHelpers";
 
+interface CustomersResponse {
+  customers: Customer[];
+  totalPages: number;
+}
+
 export default function Customers() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   
-  const { data, isPending } = useQuery({
+  const { data, isPending } = useQuery<CustomersResponse>({
     queryKey: ["customers", { page, search }],
     queryFn: () => getCustomers({ page, search }),
   });
