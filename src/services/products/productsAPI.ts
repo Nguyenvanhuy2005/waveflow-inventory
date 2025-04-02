@@ -1,10 +1,15 @@
-
 import { wcApiClient } from "../apiConfig";
 import { 
   Product, 
   ProductSearchParams,
   ProductVariation 
 } from "./types";
+import {
+  uploadProductImages,
+  getProductVariations,
+  createProductVariations,
+  updateProductVariations
+} from "./productImagesService";
 
 // Main product CRUD operations
 export const getProducts = async (params?: ProductSearchParams) => {

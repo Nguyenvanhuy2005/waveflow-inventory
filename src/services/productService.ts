@@ -1,5 +1,7 @@
 
-// This file is now simply a re-export of the modular product services
-// This maintains backward compatibility with existing imports
-
+// Re-export from the new modular structure
 export * from "./products";
+
+// Re-export specific types for backward compatibility
+export type { ProductSearchParams } from "./products/types";
+export type { Product } from "./products/types";

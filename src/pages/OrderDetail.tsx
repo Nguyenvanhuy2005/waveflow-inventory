@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getOrder, updateOrder, getProducts } from "@/services/orderService";
+import { getOrder, updateOrder } from "@/services/orderService";
+import { getProducts } from "@/services/products"; // Import from the correct service
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
