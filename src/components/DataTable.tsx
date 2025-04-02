@@ -67,14 +67,18 @@ export function DataTable<TData, TValue>({
     data,
     columns: columnsMemo,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    state: {
-      pagination: pagination
-        ? { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }
-        : undefined,
-    },
-    manualPagination: !!pagination,
-    pageCount: pagination?.pageCount || -1,
+    // Only enable pagination model if pagination is provided
+    ...(pagination ? { 
+      getPaginationRowModel: getPaginationRowModel(),
+      state: {
+        pagination: { 
+          pageIndex: pagination.pageIndex, 
+          pageSize: pagination.pageSize 
+        },
+      },
+      manualPagination: true,
+      pageCount: pagination.pageCount || -1,
+    } : {}),
   });
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
