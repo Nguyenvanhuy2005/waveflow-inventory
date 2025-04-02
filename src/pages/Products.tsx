@@ -1,11 +1,10 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { getProducts, ProductSearchParams } from "@/services/productService";
 import { DataTable } from "@/components/DataTable";
 import { formatCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Button } from "@/components/ui/button";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useState<ProductSearchParams>({
@@ -52,9 +51,7 @@ const Products = () => {
                 ) : (
                   <div className="w-10 h-10 bg-gray-200 rounded-md" />
                 )}
-                <Link to={`/products/${row.id}`} className="font-medium hover:underline text-primary">
-                  {row.name}
-                </Link>
+                <span className="font-medium">{row.name}</span>
               </div>
             ),
           },
@@ -90,17 +87,6 @@ const Products = () => {
             header: "Trạng thái",
             accessorKey: "status",
             cell: (row) => <StatusBadge status={row.status} type="product" />,
-          },
-          {
-            header: "Thao tác",
-            accessorKey: "id",
-            cell: (row) => (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/products/${row.id}`}>Chi tiết</Link>
-                </Button>
-              </div>
-            ),
           },
         ]}
         data={data || []}
