@@ -5,21 +5,14 @@ import { getProducts, ProductSearchParams, getProductVariations } from "@/servic
 import { DataTable } from "@/components/DataTable";
 import { formatCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useState<ProductSearchParams>({
-    per_page: 10,
+    per_page: 50, // Increased from 10 to show more products
     page: 1,
   });
 
@@ -43,6 +36,38 @@ const Products = () => {
       ...prev,
       [productId]: !prev[productId]
     }));
+  };
+
+  // Calculate total stock including variations
+  const calculateTotalStock = (product: any) => {
+    if (!product.manage_stock) return "N/A";
+    
+    let totalStock = 0;
+    
+    // Add main product stock if it exists
+    if (product.stock_quantity !== null && product.stock_quantity > 0) {
+      totalStock += product.stock_quantity;
+    }
+    
+    // Add variation stocks if they exist
+    if (product.variations && product.variations.length > 0 && product.variationsDetails) {
+      product.variationsDetails.forEach((variation: any) => {
+        if (variation.manage_stock && variation.stock_quantity !== null && variation.stock_quantity > 0) {
+          totalStock += variation.stock_quantity;
+        }
+      });
+    }
+    
+    // Display warning if total stock is low
+    if (totalStock <= 5) {
+      return (
+        <span className="text-red-600 font-semibold">
+          {totalStock}
+        </span>
+      );
+    }
+    
+    return totalStock || 0;
   };
 
   // Define columns with proper typing
@@ -82,6 +107,17 @@ const Products = () => {
     {
       header: "ID",
       accessorKey: "id",
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <Link 
+            to={`/products/${product.id}`} 
+            className="font-medium text-primary hover:underline"
+          >
+            {product.id}
+          </Link>
+        );
+      },
     },
     {
       header: "Tên",
@@ -118,19 +154,7 @@ const Products = () => {
       accessorKey: "stock_quantity",
       cell: ({ row }) => {
         const product = row.original;
-        if (!product.manage_stock) return "N/A";
-        if (product.stock_quantity === null) return "N/A";
-        
-        // Display warning if stock is low
-        if (product.stock_quantity <= 5) {
-          return (
-            <span className="text-red-600 font-semibold">
-              {product.stock_quantity}
-            </span>
-          );
-        }
-        
-        return product.stock_quantity;
+        return calculateTotalStock(product);
       },
     },
     {
@@ -138,54 +162,12 @@ const Products = () => {
       accessorKey: "status",
       cell: ({ row }) => <StatusBadge status={row.original.status} type="product" />,
     },
-    {
-      header: "Thao tác",
-      id: "actions",
-      cell: ({ row }) => {
-        const product = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link to={`/products/${product.id}`}>
-                  Xem chi tiết
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to={`/products/${product.id}/edit`}>
-                  Chỉnh sửa
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => {
-                  toast.info(`Chức năng xóa sản phẩm ${product.id} đang phát triển`);
-                }}
-              >
-                Xóa sản phẩm
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Sản phẩm</h1>
-        <Button asChild>
-          <Link to="/products/new">
-            Thêm sản phẩm mới
-          </Link>
-        </Button>
       </div>
 
       <DataTable
@@ -196,8 +178,8 @@ const Products = () => {
         isPending={isPending}
         pagination={{
           pageIndex: searchParams.page ? searchParams.page - 1 : 0,
-          pageSize: searchParams.per_page || 10,
-          pageCount: 10, // Hardcoded for now, would ideally come from API
+          pageSize: searchParams.per_page || 50,
+          pageCount: 20, // Increased page count to accommodate more products
           onPageChange: handlePageChange,
         }}
         renderSubComponent={(row) => {

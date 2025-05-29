@@ -1,4 +1,3 @@
-
 import { wcApiClient } from "../apiConfig";
 import { 
   Product, 
@@ -15,6 +14,14 @@ import {
 // Main product CRUD operations
 export const getProducts = async (params?: ProductSearchParams) => {
   try {
+    // Default parameters to fetch more products
+    const defaultParams = { 
+      per_page: 100, // Increased default to show more products
+      ...params 
+    };
+
+    console.log("Fetching products with params:", defaultParams);
+    
     // Check if the search term might be a product ID
     if (params?.search && !isNaN(Number(params.search))) {
       console.log(`Search term looks like an ID: ${params.search}`);
@@ -28,34 +35,52 @@ export const getProducts = async (params?: ProductSearchParams) => {
       }
     }
     
-    // Check if search is a SKU - need to modify params for SKU search
-    const searchParams = { ...params };
-    if (params?.search && params.search.length > 0) {
-      if (params.search.toUpperCase().startsWith('SC') || 
-          /^[A-Z0-9-_]+$/.test(params.search.toUpperCase())) {
-        console.log(`Search term looks like a SKU: ${params.search}`);
-        // WooCommerce doesn't have a direct SKU filter in the products endpoint
-        // We'll add it as a parameter and handle in a filter below
-        searchParams.sku = params.search;
-      }
-    }
-
-    const defaultParams = { per_page: 20, ...searchParams };
+    // Perform the main search
     const response = await wcApiClient.get<Product[]>("/products", { params: defaultParams });
-    
     let products = response.data;
     
-    // If we're searching for a SKU, filter results client-side
-    if (searchParams.sku) {
-      products = products.filter(product => 
-        product.sku?.toLowerCase().includes(searchParams.sku!.toLowerCase())
-      );
+    // Client-side filtering for better search functionality
+    if (params?.search && params.search.length > 0) {
+      const searchTerm = params.search.toLowerCase();
+      console.log(`Filtering products by search term: ${searchTerm}`);
       
-      console.log(`Filtered to ${products.length} products matching SKU: ${searchParams.sku}`);
+      products = products.filter(product => {
+        // Search in product name
+        const nameMatch = product.name?.toLowerCase().includes(searchTerm);
+        
+        // Search in SKU
+        const skuMatch = product.sku?.toLowerCase().includes(searchTerm);
+        
+        // Search in product description
+        const descriptionMatch = product.description?.toLowerCase().includes(searchTerm);
+        
+        // Search in short description
+        const shortDescriptionMatch = product.short_description?.toLowerCase().includes(searchTerm);
+        
+        return nameMatch || skuMatch || descriptionMatch || shortDescriptionMatch;
+      });
+      
+      console.log(`Filtered to ${products.length} products matching search term: ${params.search}`);
     }
     
-    console.log(`Fetched ${products.length} products`);
-    return products;
+    // Load variations for products that have them to calculate proper stock
+    const productsWithVariations = await Promise.all(
+      products.map(async (product) => {
+        if (product.variations && product.variations.length > 0) {
+          try {
+            const variationsDetails = await getProductVariations(product.id);
+            return { ...product, variationsDetails };
+          } catch (error) {
+            console.error(`Error loading variations for product ${product.id}:`, error);
+            return product;
+          }
+        }
+        return product;
+      })
+    );
+    
+    console.log(`Fetched ${productsWithVariations.length} products with variation details`);
+    return productsWithVariations;
   } catch (error) {
     console.error("Error fetching products:", error);
     throw error;
