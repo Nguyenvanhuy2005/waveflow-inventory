@@ -1,6 +1,6 @@
 
 import { NavLink, useLocation } from "react-router-dom";
-import { BarChart3, Package, ShoppingCart, Users, User2, Settings } from "lucide-react";
+import { BarChart3, ShoppingCart, Users, Truck, Package2, RotateCcw, Receipt, AlertTriangle, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,11 +21,6 @@ const items = [
     icon: BarChart3,
   },
   {
-    title: "Sản phẩm",
-    path: "/products",
-    icon: Package,
-  },
-  {
     title: "Đơn hàng",
     path: "/orders",
     icon: ShoppingCart,
@@ -36,9 +31,29 @@ const items = [
     icon: Users,
   },
   {
-    title: "Người dùng",
-    path: "/users",
-    icon: User2,
+    title: "Nhà cung cấp",
+    path: "/suppliers",
+    icon: Truck,
+  },
+  {
+    title: "Nhập hàng",
+    path: "/inventory-import",
+    icon: Package2,
+  },
+  {
+    title: "Trả hàng",
+    path: "/returns",
+    icon: RotateCcw,
+  },
+  {
+    title: "Phiếu thu chi",
+    path: "/payment-receipts",
+    icon: Receipt,
+  },
+  {
+    title: "Hàng hỏng",
+    path: "/damaged-goods",
+    icon: AlertTriangle,
   },
   {
     title: "Cài đặt",
